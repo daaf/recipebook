@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>recipebook</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div id="logo-container">
+        <span id="logo">📖</span>
+        <h1>recipebook</h1>
+      </div>
+      <div id="add-recipe-container">
+        <button id="add-recipe-button" aria-label="Add recipe">+</button>
+        <form id="add-recipe" aria-label="Create a new recipe">
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="New recipe"
+            required
+          /><textarea
+            id="description"
+            name="description"
+            placeholder="Description (optional)"
+          ></textarea>
+          <fieldset id="ingredients" name="ingredients">
+            <legend>Ingredients</legend>
+            <input type="text" class="ingredient" name="1" />
+            <input type="text" class="ingredient" name="2" />
+            <input type="text" class="ingredient" name="3" />
+            <input type="text" class="ingredient" name="4" />
+            <input type="text" class="ingredient" name="5" />
+            <input type="text" class="ingredient" name="6" />
+            <input type="text" class="ingredient" name="7" />
+            <input type="text" class="ingredient" name="8" />
+            <button type="button" aria-label="Add fields for more ingredients">
+              +
+            </button>
+          </fieldset>
+          <fieldset id="instructions" name="instructions">
+            <legend>Instructions</legend>
+            <input type="text" class="step" name="1" />
+            <input type="text" class="step" name="2" />
+            <input type="text" class="step" name="3" />
+            <input type="text" class="step" name="4" />
+            <button type="button" aria-label="Add fields for more steps">
+              +
+            </button>
+          </fieldset>
+          <fieldset id="form-actions" name="form-actions">
+            <button type="button" name="cancel" aria-label="Discard new recipe">
+              Cancel
+            </button>
+            <button type="submit" name="submit" aria-label="Save recipe">
+              Save
+            </button>
+          </fieldset>
+        </form>
+      </div>
+    </header>
+    <div class="container">
+      <div class="recipe-list">
+        <h2>Your recipes</h2>
+      </div>
+    </div>
+    <div class="modal-outer">
+      <div class="modal-inner">
+        <h2>Edit recipe</h2>
+        <form id="edit-recipe">
+          <label for="name">Recipe name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="Recipe name"
+            required
+          />
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Description"
+          ></textarea>
+          <label for="ingredients">Ingredients</label>
+          <textarea
+            id="ingredients"
+            name="ingredients"
+            placeholder="Ingredients separated by commas"
+            required
+          ></textarea>
+          <label for="instructions">Instructions</label>
+          <textarea
+            id="instructions"
+            name="instructions"
+            placeholder="Instructions to make the dish"
+            required
+          ></textarea>
+          <button type="submit" name="save">Save</button>
+          <button type="button" name="cancel">Cancel</button>
+        </form>
+      </div>
+    </div>
+    <footer></footer>
+    <script src="./main.js"></script>
+  </body>
+</html>
