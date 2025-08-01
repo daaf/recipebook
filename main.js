@@ -1,5 +1,5 @@
-const addRecipeButton = document.getElementById('add-recipe');
-const recipeForm = document.getElementById('add-update-recipe');
+const addRecipeButton = document.querySelector('#add-recipe');
+const recipeForm = document.querySelector('#add-update-recipe');
 const ingredientsFieldset = recipeForm.querySelector('fieldset#ingredients');
 const instructionsFieldset = recipeForm.querySelector('fieldset#instructions');
 const addMoreFieldsButtons = recipeForm.querySelectorAll('fieldset>button');
@@ -9,10 +9,11 @@ const modalInnerElement = document.querySelector('.modal-inner');
 const modalHeader = modalInnerElement.querySelector('h2');
 
 let recipes = [];
+let uploadedImage;
 
 /* TODOs:
+    - Allow users to upload images for recipes. Store images (perhaps all recipe data) in IndexedDb
     - Add search to filter list of recipes
-    - Add support for images
     - New flow for editing recipes: Click '...' button in corner of card to see options
     - Only show card w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
     - Format recipe text: Capitalize first letter of each field, undoubtedly more...
@@ -56,13 +57,11 @@ function deleteRecipe(id) {
     recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
 }
 
-
-function displayRecipes() {
-    modalHeader.innerHTML = '';
-
-    const html = recipes.map((recipe) => 
+function displayFullRecipe(recipe) {
+    const html = 
         `<div class="recipe" data-id="${recipe.id}">
             <h2 class="recipe-name">${recipe.name}</h2>
+            <p>${recipe.description}</p>
             <h3>Ingredients</h3>
             <ul class="recipe-ingredients">${recipe.ingredients.map((ingredient) => 
                 `<li>${ingredient}</li>`).join('')}</ul>
@@ -73,18 +72,38 @@ function displayRecipes() {
             <button class="edit-recipe">Edit</button>
             <button class="delete-recipe">Delete</button>
         </div>`
+    // display in modal??
+}
+
+
+function displayRecipeCards() {
+    const html = recipes.map((recipe) => 
+        `<div class="recipe-card" data-id="${recipe.id}">
+            <div class="recipe-card-img-container" >
+                <img src="${recipe.photo || './assets/icons/fast-food-100.png'}" ${recipe.photo ? '' : 'class="placeholder"'} alt="${recipe.name}" />
+            </div>
+            <div class="recipe-card-body">
+                <div class="recipe-card-header">
+                    <h2 class="recipe-name">${recipe.name}</h2>
+                    <div class="options-dropdown">
+                        <input type="image" src="./assets/icons/3-dots_black.png" class="see-options" aria-label="See more options" name="options" />
+                        <div class="options">
+                            <a class="edit-recipe">Edit</a>
+                            <a class="delete-recipe">Delete</a>
+                        </div>
+                    </div>
+                </div>
+                <ul class="recipe-ingredients">${recipe.ingredients.map((ingredient) => 
+                    `<li>${ingredient}</li>`).join('')}
+                </ul>
+            </div>
+        </div>`
     ).join('');
 
     recipeListElement.innerHTML = html;
 }
 
-function addFieldsToFieldset(fieldset, values) {
-
-    if (!fieldset.matches('fieldset')) {
-        console.log('Error: Invalid object passed to addFieldsToFieldset');
-        return;
-    }
-
+function addFieldsToFieldset(fieldset, values=[null]) {
     const columnCount = getComputedStyle(fieldset).gridTemplateColumns.split(' ').length;
     const newFieldCount = Math.ceil(values.length / columnCount) * columnCount;
 
@@ -97,8 +116,7 @@ function addFieldsToFieldset(fieldset, values) {
     const newFieldHtml = Array.from({length: newFieldCount})
         .map((_, index) => 
             `<input type="text" class="${classList}" name="${firstInputName + index}" value="${values[index] || ""}" />`
-        )
-        .join('');
+        ).join('');
 
     if (lastInput) {
         lastInput.insertAdjacentHTML('afterend', newFieldHtml)
@@ -108,7 +126,6 @@ function addFieldsToFieldset(fieldset, values) {
 }
 
 function inputsInFieldset(fieldset) {
-    console.log([...fieldset.children])
     return [...fieldset.children]
         .filter((element) => element.matches('input'));
 }
@@ -137,6 +154,7 @@ function handleSave(event) {
 
 function handleAdd(event) {
     const recipe = handleSave(event);
+    console.log(event)
     addRecipe(recipe);
 }
 
@@ -155,6 +173,7 @@ function openModal() {
 
 function closeModal() {
     modalOuterElement.classList.remove('open');
+    recipeForm.removeAttribute('data-id');
 
     [ingredientsFieldset, instructionsFieldset]
         .forEach((fieldset) => 
@@ -177,6 +196,7 @@ function populateEditForm(recipeId) {
     
     const recipe = recipes.find((recipe) => recipe.id === recipeId);
         
+    recipeForm.setAttribute('data-id', recipeId);
     recipeForm.name.value = recipe.name;
     recipeForm.description.value = recipe.description;
 
@@ -184,24 +204,33 @@ function populateEditForm(recipeId) {
     addFieldsToFieldset(instructionsFieldset, recipe.instructions);
 }
 
+function toggleOptionsMenu(event) {
+    const seeOptionsButton = event.target.closest('.recipe-card').querySelector('.see-options');
+    const optionsElement = event.target.closest('.recipe-card').querySelector('.options');
+    seeOptionsButton.classList.toggle('menu-open')
+    optionsElement.classList.toggle('show');
+}
+
 
 function handleRecipeClick(event) {
-    try {
 
-        const recipeId = event.target.closest('.recipe').dataset.id;
-
-        if (event.target.matches('button.edit-recipe')) {
-            populateEditForm(recipeId);
-            recipeForm.setAttribute('data-id', recipeId);
-            openModal();
-        }
-        
-        if (event.target.matches('button.delete-recipe')) {
-            deleteRecipe(recipeId);
-        }
-    } catch(error) {
-        console.log(error);
+    if (event.target.matches('.see-options')) {
+        toggleOptionsMenu(event);
     }
+
+    const recipeId = event.target.closest('.recipe-card')?.dataset.id;
+    
+    if (event.target.matches('.edit-recipe')) {
+        toggleOptionsMenu(event);
+        populateEditForm(recipeId);
+        openModal();
+    }
+    
+    if (event.target.matches('.delete-recipe')) {
+        toggleOptionsMenu(event);
+        deleteRecipe(recipeId);
+    }
+    
 }
 
 
@@ -235,7 +264,7 @@ recipeForm.addEventListener('submit', (event) => {
     closeModal();
 });
 recipeListElement.addEventListener('click', handleRecipeClick);
-recipeListElement.addEventListener('recipesUpdated', displayRecipes);
+recipeListElement.addEventListener('recipesUpdated', displayRecipeCards);
 recipeListElement.addEventListener('recipesUpdated', mirrorRecipesToLocalStorage);
 modalOuterElement.addEventListener('click', handleModalClick);
 window.addEventListener('keydown', (event) => {
@@ -268,6 +297,7 @@ function preloadData() {
             description: 'the first time i made oatmeal this way i thought it tasted like french toast topped with berries...thus the name! :) use whichever kind of berries you like...my personal favorite is cherries.',
             instructions: ['Add 1/2 cup old-fashioned oats and 1 cup water into a large microwaveable bowl', 'Cook in microwave on 50% power for 6 minutes', 'Place frozen berries in small bowl and defrost in microwave until the juice from the berries is released', 'Add defrosted berries, sugar free syrup, butter spray, and flax seed together and stir well.', 'Enjoy!'],
             ingredients : ['old fashioned oats', 'water', 'berries', 'ground flax seeds', 'sugar-free syrup', 'i can\'t believe it\'s not butter spread'],
+            photo: 'assets/recipes/berry-oatmeal.jpg',
         }, 
         {
             id: crypto.randomUUID(),
@@ -283,6 +313,7 @@ function preloadData() {
                 'Pour the batter over slices and bake in a preheated 500 oven',
                 'When nearly done, remove from oven and sprinkle here and there with a mixture of sugar and cinnamon to taste', 'place dabs of butter on the pancake and return to oven until browned', 'just before serving , sprinkle with lemon juice , and cut into triangles'],
             ingredients: ['eggs', 'milk', 'flour', 'sugar', 'salt', 'cream', 'apples', 'butter', 'cinnamon', 'lemon juice'],
+            photo: 'assets/recipes/danish-apple-pancakes.jpg',
         }]
     ));
 }
