@@ -1,19 +1,20 @@
-const addRecipeForm = document.getElementById('add-recipe');
-const editRecipeForm = document.getElementById('edit-recipe');
+const addRecipeButton = document.getElementById('add-recipe');
+const recipeForm = document.getElementById('add-update-recipe');
+const ingredientsFieldset = recipeForm.querySelector('fieldset#ingredients');
+const instructionsFieldset = recipeForm.querySelector('fieldset#instructions');
+const addMoreFieldsButtons = recipeForm.querySelectorAll('fieldset>button');
 const recipeListElement = document.querySelector('.recipe-list');
 const modalOuterElement = document.querySelector('.modal-outer');
 const modalInnerElement = document.querySelector('.modal-inner');
+const modalHeader = modalInnerElement.querySelector('h2');
 
 let recipes = [];
 
-
 /* TODOs:
-    - open modal or side menu to add recipes
-    - Figure out a way to allow commas in ingredients and instructions fields--separate field for each step/ingredient?
     - Add search to filter list of recipes
     - Add support for images
     - New flow for editing recipes: Click '...' button in corner of card to see options
-    - Only show caard w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
+    - Only show card w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
     - Format recipe text: Capitalize first letter of each field, undoubtedly more...
     - All styling :)
 */
@@ -57,7 +58,7 @@ function deleteRecipe(id) {
 
 
 function displayRecipes() {
-    recipeListElement.innerHTML = '';
+    modalHeader.innerHTML = '';
 
     const html = recipes.map((recipe) => 
         `<div class="recipe" data-id="${recipe.id}">
@@ -77,41 +78,110 @@ function displayRecipes() {
     recipeListElement.innerHTML = html;
 }
 
+function addFieldsToFieldset(fieldset, values) {
 
-function handleRecipeForm(event) {
+    if (!fieldset.matches('fieldset')) {
+        console.log('Error: Invalid object passed to addFieldsToFieldset');
+        return;
+    }
+
+    const columnCount = getComputedStyle(fieldset).gridTemplateColumns.split(' ').length;
+    const newFieldCount = Math.ceil(values.length / columnCount) * columnCount;
+
+    const inputs = fieldset.querySelectorAll('input');
+    const lastInput = inputs[inputs.length - 1];
+
+    const classList = fieldset.dataset.childClassList;
+    const firstInputName = lastInput ? (Number(lastInput.name) + 1) : 0;
+
+    const newFieldHtml = Array.from({length: newFieldCount})
+        .map((_, index) => 
+            `<input type="text" class="${classList}" name="${firstInputName + index}" value="${values[index] || ""}" />`
+        )
+        .join('');
+
+    if (lastInput) {
+        lastInput.insertAdjacentHTML('afterend', newFieldHtml)
+    } else {
+        fieldset.insertAdjacentHTML('afterbegin', newFieldHtml)
+    }
+}
+
+function inputsInFieldset(fieldset) {
+    console.log([...fieldset.children])
+    return [...fieldset.children]
+        .filter((element) => element.matches('input'));
+}
+
+
+function valuesInFieldset(fieldset) {
+    return inputsInFieldset(fieldset)
+        .filter((input) => input.value)
+        .map((input) => input.value);
+}
+
+
+function handleSave(event) {
     event.preventDefault();
     
     const recipe = {
         id: event.currentTarget.dataset.id || crypto.randomUUID(),
         name: event.currentTarget.name.value, 
         description: event.currentTarget.description.value,
-        ingredients: getArrayFromInput(event.currentTarget.ingredients.value),
-        instructions: getArrayFromInput(event.currentTarget.instructions.value)
+        ingredients: valuesInFieldset(ingredientsFieldset),
+        instructions: valuesInFieldset(instructionsFieldset),
     };
-    
-    event.target.reset();
     return recipe;
 }
 
 
-function handleSubmit(event) {
-    const recipe = handleRecipeForm(event);
+function handleAdd(event) {
+    const recipe = handleSave(event);
     addRecipe(recipe);
 }
 
 
 function handleUpdate(event) {
-    const recipe = handleRecipeForm(event);
+    const recipe = handleSave(event);
+    event.currentTarget.removeAttribute('data-id');
     updateRecipe(recipe);
+}
+
+
+function openModal() {
+    modalOuterElement.classList.add('open');
 }
 
 
 function closeModal() {
     modalOuterElement.classList.remove('open');
+
+    [ingredientsFieldset, instructionsFieldset]
+        .forEach((fieldset) => 
+            [...fieldset.querySelectorAll('input')]
+                .forEach((input) => 
+                    input.remove()) );
+    
+    recipeForm.reset();
 }
 
-function getArrayFromInput(text) {
-    return text.split(',').map((item) => item.trim());
+function populateAddForm() {
+    modalHeader.textContent = 'New recipe';
+    addFieldsToFieldset(ingredientsFieldset, Array.from({length: 8}));
+    addFieldsToFieldset(instructionsFieldset, Array.from({length: 4}));
+}
+
+function populateEditForm(recipeId) {
+
+    modalHeader.textContent = 'Edit recipe';
+    
+    const recipe = recipes.find((recipe) => recipe.id === recipeId);
+        
+    recipeForm.name.value = recipe.name;
+    recipeForm.description.value = recipe.description;
+
+    addFieldsToFieldset(ingredientsFieldset, recipe.ingredients);
+    addFieldsToFieldset(instructionsFieldset, recipe.instructions);
 }
 
 
@@ -121,16 +191,9 @@ function handleRecipeClick(event) {
         const recipeId = event.target.closest('.recipe').dataset.id;
 
         if (event.target.matches('button.edit-recipe')) {
-            console.log('edit button clicked');
-            const recipe = recipes.find((recipe) => recipe.id === recipeId);
-
-            editRecipeForm.name.value = recipe.name;
-            editRecipeForm.description.value = recipe.description;
-            editRecipeForm.ingredients.value = recipe.ingredients;
-            editRecipeForm.instructions.value = recipe.instructions;
-            
-            modalOuterElement.classList.add('open');
-            editRecipeForm.setAttribute('data-id', recipeId);
+            populateEditForm(recipeId);
+            recipeForm.setAttribute('data-id', recipeId);
+            openModal();
         }
         
         if (event.target.matches('button.delete-recipe')) {
@@ -143,21 +206,34 @@ function handleRecipeClick(event) {
 
 
 function handleModalClick(event) {
-    const isInside = event.target.closest('.modal-inner');
+    const isInInnerModal = event.target.closest('.modal-inner');
+    const parentFieldset = event.target.closest('fieldset');
 
     if (
-        !isInside 
+        !isInInnerModal 
         || event.target.matches('button[name="cancel"]')
-        || event.target.matches('button[name="save"]')
     ) {
         closeModal();
+    } else if (parentFieldset) {
+        addFieldsToFieldset(parentFieldset);
     }
 }
 
+function handleAddRecipeClick(event) {
+    populateAddForm();
+    openModal();
+}
 
-addRecipeForm.addEventListener('submit', handleSubmit);
-editRecipeForm.addEventListener('submit', handleUpdate);
-editRecipeForm.addEventListener('click', handleModalClick);
+
+addRecipeButton.addEventListener('click', handleAddRecipeClick);
+recipeForm.addEventListener('submit', (event) => {
+    if (event.currentTarget.dataset.id) {
+        handleUpdate(event);
+    } else {
+        handleAdd(event);
+    }
+    closeModal();
+});
 recipeListElement.addEventListener('click', handleRecipeClick);
 recipeListElement.addEventListener('recipesUpdated', displayRecipes);
 recipeListElement.addEventListener('recipesUpdated', mirrorRecipesToLocalStorage);
