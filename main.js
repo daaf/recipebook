@@ -1,97 +1,103 @@
+import { recipes, Database } from './datastore.js';
+import preload from './data/preload.js';
+
 const addRecipeButton = document.querySelector('#add-recipe');
 const recipeForm = document.querySelector('#add-update-recipe');
+// const imgInput = document.querySelector('#img-input');
+// const imgPreview = document.querySelector('#img-preview');
 const ingredientsFieldset = recipeForm.querySelector('fieldset#ingredients');
 const instructionsFieldset = recipeForm.querySelector('fieldset#instructions');
-const addMoreFieldsButtons = recipeForm.querySelectorAll('fieldset>button');
+// const addMoreFieldsButtons = recipeForm.querySelectorAll('fieldset>button');
 const recipeListElement = document.querySelector('.recipe-list');
 const modalOuterElement = document.querySelector('.modal-outer');
 const modalInnerElement = document.querySelector('.modal-inner');
 const modalHeader = modalInnerElement.querySelector('h2');
 
+/*---------- CONNECT TO DATABASE ----------*/
+const db = new Database();
+await db.connect();
 
-let recipes = [];
+const fireUpdateEvent = () => {
+    recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+};
 
-
-/* TODOs:
-    - Allow users to upload images for recipes. Store images (perhaps all recipe data) in IndexedDb
-    - Add search to filter list of recipes
-    - Add support for images
-    - New flow for editing recipes: Click '...' button in corner of card to see options
-    - Only show card w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
-    - Format recipe text: Capitalize first letter of each field, undoubtedly more...
-    - All styling :)
-*/
-
-
-
-/* ---------- MOVE DATA TO/FROM STORAGE ---------- */
-
-function restoreRecipesFromLocalStorage() {
-    const storedRecipes = JSON.parse(localStorage.getItem('recipes'));
+async function restoreRecipesFromDatabase() {
+    const storedRecipes = await db.getAll();
 
     if (storedRecipes && storedRecipes.length) {
         recipes.push(...storedRecipes);
-        recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+        console.log(recipes);
+        fireUpdateEvent();
     }
 }
 
+/* TODOs:
+- Allow users to upload images for recipes. Store images (perhaps all recipe data) in IndexedDb
+- Add search to filter list of recipes
+- Add support for images
+- New flow for editing recipes: Click '...' button in corner of card to see options
+- Only show card w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
+- Format recipe text: Capitalize first letter of each field, undoubtedly more...
+- All styling :)
+*/
 
-function mirrorRecipesToLocalStorage() {
-    localStorage.setItem('recipes', JSON.stringify(recipes));
-}
-
-
-
-/* ---------- MANIPULATE DATA IN MEMORY ---------- */
+/* ---------- DATA OPERATIONS - BOTH IN-MEMORY & DATABASE ---------- */
 
 function addRecipe(recipe) {
     recipes.push(recipe);
-    recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+    db.put(recipe);
+    fireUpdateEvent();
 }
-
 
 function updateRecipe(recipe) {
-    const recipeToUpdateIndex = recipes.findIndex((existingRecipe) => existingRecipe.id === recipe.id);
-    recipes[recipeToUpdateIndex] = recipe;
-    recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+    const index = getRecipeIndexById(recipe.id);
+    recipes[index] = recipe;
+    db.put(recipe);
+    fireUpdateEvent();
 }
-
 
 function deleteRecipe(id) {
-    recipes = recipes.filter((recipe) => recipe.id !== id);
-    recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+    const index = getRecipeIndexById(id);
+    recipes.splice(index, 1);
+    db.delete(id);
+    fireUpdateEvent();
 }
-
-
 
 /* ---------- GET DATA IN MEMORY ---------- */
 
-const getRecipeById = (recipeId) => recipes.find((recipe) => recipe.id === recipeId);
+const matchRecipeIds = (recipeId) => (recipe) => recipe.id === recipeId;
 
+const getRecipeById = (recipeId) => recipes.find(matchRecipeIds(recipeId));
 
+const getRecipeIndexById = (recipeId) =>
+    recipes.findIndex(matchRecipeIds(recipeId));
 
 /* ---------- DEFINE UI COMPONENTS ---------- */
 
-const getTextInputHtml = ({classList, name, value}) => 
+const getTextInputHtml = ({ classList, name, value }) =>
     `<input type="text" class="${classList}" name="${name}" value="${value}" />`;
 
-
-const getTextInputSetHtml = (count, {classList, nameStart}, values) => 
-    Array.from({length: count})
-        .map((_, index) => 
+const getTextInputSetHtml = (count, { classList, nameStart }, values) =>
+    Array.from({ length: count })
+        .map((_, index) =>
             getTextInputHtml({
                 classList,
                 name: nameStart + index,
-                value: values[index] || "",
-            }
-        ))
+                value: values[index] || '',
+            })
+        )
         .join('');
 
+const getLiHtml = (text) => `<li>${text}</li>`;
 
 function getRecipeCardHtml(recipe) {
     return `<div class="recipe-card" data-id="${recipe.id}">
                 <div class="recipe-card-img-container" >
-                    <img src="${recipe.photo || './assets/icons/fast-food-100.png'}" ${recipe.photo ? '' : 'class="placeholder"'} alt="${recipe.name}" />
+                    <img src="${
+                        recipe.photo || './assets/icons/fast-food-100.png'
+                    }" ${recipe.photo ? '' : 'class="placeholder"'} alt="${
+        recipe.name
+    }" />
                 </div>
                 <div class="recipe-card-body">
                     <div class="recipe-card-header">
@@ -104,73 +110,100 @@ function getRecipeCardHtml(recipe) {
                             </div>
                         </div>
                     </div>
-                    <ul class="recipe-ingredients">${recipe.ingredients.map((ingredient) => 
-                        `<li>${ingredient}</li>`).join('')}
+                    <ul class="recipe-ingredients">${recipe.ingredients
+                        .map(getLiHtml)
+                        .join('')}
                     </ul>
                 </div>
-            </div>`
+            </div>`;
 }
 
-
-function getRecipeListHtml() {
+function getRecipeCardListHtml(recipes) {
     return recipes.map(getRecipeCardHtml).join('');
 }
 
+// function displayFullRecipe(recipe) {
+//     const html =
+//         `<div class="recipe" data-id="${recipe.id}">
+//             <h2 class="recipe-name">${recipe.name}</h2>
+//             <p>${recipe.description}</p>
+//             <h3>Ingredients</h3>
+//             <ul class="recipe-ingredients">${recipe.ingredients.map((ingredient) =>
+//                 `<li>${ingredient}</li>`).join('')}</ul>
+//             <h3>Instructions</h3>
+//             <ol class="recipe-instructions">${
+//                 recipe.instructions.map((step) => `<li>${step}</li>`).join('')
+//             }</ol>
+//             <button class="edit-recipe">Edit</button>
+//             <button class="delete-recipe">Delete</button>
+//         </div>`
+//     // display in modal??
+// }
 
-
-/* ---------- UPDATE THE DOM BASED ON DATA ---------- */
+/* ---------- UPDATE THE STATE OF THE DOM ---------- */
 
 /* Update state of recipe options menu */
 
-function toggleOptionsMenu(event) {
-    const seeOptionsButton = event.target.closest('.recipe-card').querySelector('.see-options');
-    const optionsElement = event.target.closest('.recipe-card').querySelector('.options');
-    seeOptionsButton.classList.toggle('menu-open')
+function toggleOptionsButtonState(event) {
+    const seeOptionsButton = event.target
+        .closest('.recipe-card')
+        .querySelector('.see-options');
+    seeOptionsButton.classList.toggle('menu-open');
+}
+
+function toggleOptionsMenuState(event) {
+    const optionsElement = event.target
+        .closest('.recipe-card')
+        .querySelector('.options');
     optionsElement.classList.toggle('show');
 }
 
+function toggleOptionsState(event) {
+    toggleOptionsButtonState(event);
+    toggleOptionsMenuState(event);
+}
 
 /* Update state of recipe list */
 
 function displayRecipeCards() {
-    const html = getRecipeListHtml();
+    const html = getRecipeCardListHtml(recipes);
     recipeListElement.innerHTML = html;
 }
 
-
 /* Update state of recipe form */
 
-const clearFieldsFromFieldset = (fieldset) => 
-    [...fieldset.querySelectorAll('input')]
-        .forEach((input) => input.remove());
-
+const clearFieldsFromFieldset = (fieldset) =>
+    [...fieldset.querySelectorAll('input')].forEach((input) => input.remove());
 
 function clearRecipeForm() {
-    recipeForm.removeAttribute('data-id');
-    [ingredientsFieldset, instructionsFieldset].forEach(clearFieldsFromFieldset);
     recipeForm.reset();
+    recipeForm.removeAttribute('data-id');
+    [ingredientsFieldset, instructionsFieldset].forEach(
+        clearFieldsFromFieldset
+    );
 }
 
+function addFieldsToFieldset(fieldset, values = [null]) {
+    const newInputCount = getInputCountBasedOnColumnCount(fieldset, values);
+    const attributes = getInputAttributesBasedOnFieldset(fieldset);
+    const newFieldsHtml = getTextInputSetHtml(
+        newInputCount,
+        attributes,
+        values
+    );
 
-function addFieldsToFieldset(fieldset, values=[null]) {
-    const newInputCount = getInputCountFromColumnCount(fieldset, values);
-    const attributes = getInputAttributesFromFieldset(fieldset);
-    const newFieldsHtml = getTextInputSetHtml(newInputCount, attributes, values) 
-
-    fieldset.insertAdjacentHTML('beforeend', newFieldsHtml)
+    fieldset.insertAdjacentHTML('beforeend', newFieldsHtml);
 }
-
 
 function populateAddForm() {
     modalHeader.textContent = 'New recipe';
-    addFieldsToFieldset(ingredientsFieldset, Array.from({length: 8}));
-    addFieldsToFieldset(instructionsFieldset, Array.from({length: 4}));
+    addFieldsToFieldset(ingredientsFieldset, Array.from({ length: 8 }));
+    addFieldsToFieldset(instructionsFieldset, Array.from({ length: 4 }));
 }
-
 
 function populateEditForm(recipeId) {
     const recipe = getRecipeById(recipeId);
-    
+
     modalHeader.textContent = 'Edit recipe';
     recipeForm.setAttribute('data-id', recipeId);
     recipeForm.name.value = recipe.name;
@@ -180,182 +213,167 @@ function populateEditForm(recipeId) {
     addFieldsToFieldset(instructionsFieldset, recipe.instructions);
 }
 
+function displayAddForm() {
+    populateAddForm();
+    toggleModalState();
+}
+
+function displayEditForm(recipeId) {
+    populateEditForm(recipeId);
+    toggleModalState();
+}
 
 /* Update state of modal */
 
-const closeModal = () => modalOuterElement.classList.remove('open');
-
-
-const openModal = () => modalOuterElement.classList.add('open');
-
-
+const toggleModalState = () => modalOuterElement.classList.toggle('open');
 
 /* ---------- GET DATA FROM THE DOM ---------- */
 
-const getInputsInFieldset = (fieldset) => [...fieldset.children]
-    .filter((element) => element.matches('input'));
+const getInputsInFieldset = (fieldset) =>
+    [...fieldset.children].filter((element) => element.matches('input'));
 
-
-const getValuesFromFieldset = (fieldset) => getInputsInFieldset(fieldset)
-    .filter((input) => input.value)
-    .map((input) => input.value);
-
+const getValuesFromFieldset = (fieldset) =>
+    getInputsInFieldset(fieldset)
+        .filter((input) => input.value)
+        .map((input) => input.value);
 
 const getValuesFromForm = (form) => ({
     id: form.dataset.id || crypto.randomUUID(),
-    name: form.name.value, 
+    name: form.name.value,
     description: form.description.value,
     ingredients: getValuesFromFieldset(ingredientsFieldset),
     instructions: getValuesFromFieldset(instructionsFieldset),
 });
 
-
-
 /* ---------- GET THE STATE OF THE DOM ---------- */
 
-const roundUpToFillColumns = (initialFieldCount, columnCount) => 
+const roundUpToFillColumns = (initialFieldCount, columnCount) =>
     Math.ceil(initialFieldCount / columnCount) * columnCount;
 
+const getGridColumnCount = (element) =>
+    getComputedStyle(element).gridTemplateColumns.split(' ').length;
 
-const getGridColumnCount = (element) => getComputedStyle(element)
-    .gridTemplateColumns
-    .split(' ')
-    .length;
-
-
-function getInputCountFromColumnCount(fieldset, values) {
+function getInputCountBasedOnColumnCount(fieldset, values) {
     const columnCount = getGridColumnCount(fieldset);
     const newInputCount = roundUpToFillColumns(values.length, columnCount);
-    return newInputCount
+    return newInputCount;
 }
 
-
-function getInputAttributesFromFieldset(fieldset) {
+function getInputAttributesBasedOnFieldset(fieldset) {
     const inputs = fieldset.querySelectorAll('input');
     const lastExtantInputName = inputs[inputs.length - 1]?.name;
     const classList = fieldset.dataset.childClassList;
-    const nameStart = lastExtantInputName ? (Number(lastExtantInputName) + 1) : 0;
-    return {nameStart, classList}
+    const nameStart = lastExtantInputName ? Number(lastExtantInputName) + 1 : 0;
+    return { nameStart, classList };
 }
-
-
 
 /* ---------- EVENT HANDLERS ---------- */
 
-/* Third-tier event handlers */
-
-function handleSave(event) {
-    event.preventDefault();
-    return getValuesFromForm(event.currentTarget);
-}
-
-
-
-/* Second-tier event handlers */
-
-function handleAdd(event) {
-    const recipe = handleSave(event);
-    addRecipe(recipe);
-}
-
-
-function handleUpdate(event) {
-    const recipe = handleSave(event);
-    updateRecipe(recipe);
-}
-
+/* Recipe card event handlers */
 
 function handleEditClick(event, recipeId) {
-    toggleOptionsMenu(event);
-    populateEditForm(recipeId);
-    openModal();
+    toggleOptionsState(event);
+    displayEditForm(recipeId);
 }
-
 
 function handleDeleteClick(event, recipeId) {
-    toggleOptionsMenu(event);
+    toggleOptionsState(event);
     deleteRecipe(recipeId);
 }
-
-
-const handleAddInputClick = (event) => {
-    const previousSibling = event.target.previousElementSibling;
-    
-    if (previousSibling.matches('fieldset')) {
-        addFieldsToFieldset(event.target.previousElementSibling)
-    }
-};
-
-
-function handleModalClose() {
-    clearRecipeForm();
-    closeModal();
-}
-
-
-
-/* First-tier event handlers (mostly for delegation) */
-
-function handleAddRecipeClick() {
-    populateAddForm();
-    openModal();
-}
-
 
 function handleRecipeClick(event) {
     const recipeId = event.target.closest('.recipe-card')?.dataset.id;
 
     if (event.target.matches('.see-options')) {
-        toggleOptionsMenu(event);
+        toggleOptionsState(event);
     } else if (event.target.matches('.edit-recipe')) {
-        handleEditClick(event, recipeId)
+        handleEditClick(event, recipeId);
     } else if (event.target.matches('.delete-recipe')) {
         handleDeleteClick(event, recipeId);
     }
 }
 
+/* Modal event handlers */
+
+function closeModal() {
+    clearRecipeForm();
+    toggleModalState();
+}
 
 function handleModalClick(event) {
     const isInInnerModal = event.target.closest('.modal-inner');
 
-    if (
-        !isInInnerModal 
-        || event.target.matches('button[name="cancel"]')
-    ) {
-        handleModalClose();
-
+    if (!isInInnerModal || event.target.matches('button[name="cancel"]')) {
+        closeModal();
     } else if (event.target.matches('.add-input')) {
         handleAddInputClick(event);
     }
 }
 
+const handleKeyDown = (event) => {
+    event.key === 'Escape' && closeModal();
+};
 
-const handleKeyDown = (event) => {(event.key === 'Escape') && handleModalClose()};
+/* Form event handlers */
 
+const handleAddInputClick = (event) => {
+    const previousSibling = event.target.previousElementSibling;
+
+    if (previousSibling.matches('fieldset')) {
+        addFieldsToFieldset(event.target.previousElementSibling);
+    }
+};
+
+function handleAdd(event) {
+    const recipe = getValuesFromForm(event.currentTarget);
+    addRecipe(recipe);
+}
+
+function handleUpdate(event) {
+    const recipe = getValuesFromForm(event.currentTarget);
+    updateRecipe(recipe);
+}
 
 function handleFormSubmission(event) {
+    event.preventDefault();
+
     if (event.currentTarget.dataset.id) {
         handleUpdate(event);
     } else {
         handleAdd(event);
     }
-    handleModalClose();
+    closeModal();
 }
 
+// function handleImageUpload() {
+//     const img = imgInput.files[0];
+//     const reader = new FileReader();
 
+//     reader.addEventListener(
+//         "load",
+//         () => {
+//             // convert image file to base64 string
+//             imgPreview.src = reader.result;
+//         },
+//         false,
+//     );
+
+//   if (img) {
+//     reader.readAsDataURL(img);
+//   }
+// }
 
 /* ---------- EVENT LISTENERS ---------- */
 
-addRecipeButton.addEventListener('click', handleAddRecipeClick);
+addRecipeButton.addEventListener('click', displayAddForm);
 recipeForm.addEventListener('submit', handleFormSubmission);
 recipeListElement.addEventListener('click', handleRecipeClick);
 recipeListElement.addEventListener('recipesUpdated', displayRecipeCards);
-recipeListElement.addEventListener('recipesUpdated', mirrorRecipesToLocalStorage);
 modalOuterElement.addEventListener('click', handleModalClick);
 window.addEventListener('keydown', handleKeyDown);
 
-
-
 /* ---------- INITIALIZATION ---------- */
 
-restoreRecipesFromLocalStorage();
+// preload();
+
+restoreRecipesFromDatabase();
