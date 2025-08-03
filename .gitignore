@@ -2,4 +2,4 @@
 package-lock.json
 /data
 .env
-/assets/recipes
+.DS_Store
