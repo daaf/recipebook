@@ -1,13 +1,11 @@
 import { recipes, Database } from './datastore.js';
-import preload from './data/preload.js';
 
 const addRecipeButton = document.querySelector('#add-recipe');
 const recipeForm = document.querySelector('#add-update-recipe');
-// const imgInput = document.querySelector('#img-input');
-// const imgPreview = document.querySelector('#img-preview');
+const imgInput = document.querySelector('#img-input');
+const imgPreview = document.querySelector('#img-preview');
 const ingredientsFieldset = recipeForm.querySelector('fieldset#ingredients');
 const instructionsFieldset = recipeForm.querySelector('fieldset#instructions');
-// const addMoreFieldsButtons = recipeForm.querySelectorAll('fieldset>button');
 const recipeListElement = document.querySelector('.recipe-list');
 const modalOuterElement = document.querySelector('.modal-outer');
 const modalInnerElement = document.querySelector('.modal-inner');
@@ -32,11 +30,8 @@ async function restoreRecipesFromDatabase() {
 }
 
 /* TODOs:
-- Allow users to upload images for recipes. Store images (perhaps all recipe data) in IndexedDb
 - Add search to filter list of recipes
-- Add support for images
-- New flow for editing recipes: Click '...' button in corner of card to see options
-- Only show card w/ recipe name, ingredients, and image on main screen. click 'see more' to open modal to see full recipe.
+- Click e.g. 'see more' to open modal to see full recipe.
 - Format recipe text: Capitalize first letter of each field, undoubtedly more...
 - All styling :)
 */
@@ -91,13 +86,15 @@ const getTextInputSetHtml = (count, { classList, nameStart }, values) =>
 const getLiHtml = (text) => `<li>${text}</li>`;
 
 function getRecipeCardHtml(recipe) {
+    const imgSrc = recipe.photo
+        ? URL.createObjectURL(recipe.photo)
+        : './assets/icons/fast-food-100.png';
+
     return `<div class="recipe-card" data-id="${recipe.id}">
                 <div class="recipe-card-img-container" >
-                    <img src="${
-                        recipe.photo || './assets/icons/fast-food-100.png'
-                    }" ${recipe.photo ? '' : 'class="placeholder"'} alt="${
-        recipe.name
-    }" />
+                    <img src="${imgSrc}" ${
+        recipe.photo ? '' : 'class="placeholder"'
+    } alt="${recipe.name}" />
                 </div>
                 <div class="recipe-card-body">
                     <div class="recipe-card-header">
@@ -172,12 +169,15 @@ function displayRecipeCards() {
 
 /* Update state of recipe form */
 
+const clearImagePreview = () => (imgPreview.src = '');
+
 const clearFieldsFromFieldset = (fieldset) =>
     [...fieldset.querySelectorAll('input')].forEach((input) => input.remove());
 
 function clearRecipeForm() {
     recipeForm.reset();
     recipeForm.removeAttribute('data-id');
+    clearImagePreview();
     [ingredientsFieldset, instructionsFieldset].forEach(
         clearFieldsFromFieldset
     );
@@ -237,13 +237,17 @@ const getValuesFromFieldset = (fieldset) =>
         .filter((input) => input.value)
         .map((input) => input.value);
 
-const getValuesFromForm = (form) => ({
-    id: form.dataset.id || crypto.randomUUID(),
-    name: form.name.value,
-    description: form.description.value,
-    ingredients: getValuesFromFieldset(ingredientsFieldset),
-    instructions: getValuesFromFieldset(instructionsFieldset),
-});
+const getValuesFromForm = (form) => {
+    const photoFile = imgInput.files[0] || null;
+    return {
+        id: form.dataset.id || crypto.randomUUID(),
+        name: form.name.value,
+        description: form.description.value,
+        ingredients: getValuesFromFieldset(ingredientsFieldset),
+        instructions: getValuesFromFieldset(instructionsFieldset),
+        photo: photoFile,
+    };
+};
 
 /* ---------- GET THE STATE OF THE DOM ---------- */
 
@@ -345,27 +349,20 @@ function handleFormSubmission(event) {
     closeModal();
 }
 
-// function handleImageUpload() {
-//     const img = imgInput.files[0];
-//     const reader = new FileReader();
+function handleImagePreview() {
+    const img = imgInput.files[0];
 
-//     reader.addEventListener(
-//         "load",
-//         () => {
-//             // convert image file to base64 string
-//             imgPreview.src = reader.result;
-//         },
-//         false,
-//     );
-
-//   if (img) {
-//     reader.readAsDataURL(img);
-//   }
-// }
+    if (img) {
+        imgPreview.src = URL.createObjectURL(img);
+    } else {
+        imgPreview.src = '';
+    }
+}
 
 /* ---------- EVENT LISTENERS ---------- */
 
 addRecipeButton.addEventListener('click', displayAddForm);
+imgInput.addEventListener('change', handleImagePreview);
 recipeForm.addEventListener('submit', handleFormSubmission);
 recipeListElement.addEventListener('click', handleRecipeClick);
 recipeListElement.addEventListener('recipesUpdated', displayRecipeCards);
@@ -373,7 +370,5 @@ modalOuterElement.addEventListener('click', handleModalClick);
 window.addEventListener('keydown', handleKeyDown);
 
 /* ---------- INITIALIZATION ---------- */
-
-// preload();
 
 restoreRecipesFromDatabase();
