@@ -240,7 +240,7 @@ const getValuesFromFieldset = (fieldset) =>
 const getValuesFromForm = (form) => {
     const recipeId = form.dataset.id || crypto.randomUUID();
     const photoFile =
-        imgInput.files[0] || getRecipeById(recipeId).photo || null;
+        imgInput.files[0] || getRecipeById(recipeId)?.photo || null;
 
     return {
         id: recipeId,
