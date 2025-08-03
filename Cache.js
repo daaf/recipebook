@@ -1,4 +1,4 @@
-import { getObjectIndexById } from './utils.js';
+import { getObjectById, getObjectIndexById } from './utils.js';
 
 export default class Cache {
     #store = [];
@@ -13,6 +13,10 @@ export default class Cache {
 
     #fireUpdateEvent() {
         window.dispatchEvent(this.updateEvent);
+    }
+
+    get(id) {
+        return getObjectById(this.contents, id);
     }
 
     add(...objects) {
@@ -35,10 +39,16 @@ export default class Cache {
     }
 
     async restoreFromDatabase(db) {
-        const storedRecipes = await db.getAll();
+        const storedObjects = await db.getAll();
+        const storedObjectCount = storedObjects.length;
 
-        if (storedRecipes && storedRecipes.length) {
-            this.#store.push(...storedRecipes);
+        if (storedObjects && storedObjectCount && db.connection) {
+            this.#store.push(...storedObjects);
+            console.log(
+                `Restored ${storedObjectCount} ${
+                    storedObjectCount === 1 ? 'item' : 'items'
+                } from database`
+            );
             this.#fireUpdateEvent();
         }
     }
