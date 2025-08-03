@@ -238,9 +238,12 @@ const getValuesFromFieldset = (fieldset) =>
         .map((input) => input.value);
 
 const getValuesFromForm = (form) => {
-    const photoFile = imgInput.files[0] || null;
+    const recipeId = form.dataset.id || crypto.randomUUID();
+    const photoFile =
+        imgInput.files[0] || getRecipeById(recipeId).photo || null;
+
     return {
-        id: form.dataset.id || crypto.randomUUID(),
+        id: recipeId,
         name: form.name.value,
         description: form.description.value,
         ingredients: getValuesFromFieldset(ingredientsFieldset),
