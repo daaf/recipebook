@@ -56,9 +56,15 @@ const form = new Form();
 const getLiHtml = (text) => `<li>${text}</li>`;
 
 function getRecipeCardHtml(recipe) {
-    const imgSrc = recipe.photo
-        ? URL.createObjectURL(recipe.photo)
-        : './assets/icons/fast-food-100.png';
+    let imgSrc = './assets/icons/fast-food-100.png';
+
+    if (recipe.photo instanceof Blob) {
+        try {
+            imgSrc = URL.createObjectURL(recipe.photo);
+        } catch (error) {
+            console.warn('Failed to create image URL from photo Blob', error);
+        }
+    }
 
     return `<div class="recipe-card" data-id="${recipe.id}">
                 <div class="recipe-card-img-container" >
@@ -183,19 +189,27 @@ function handleImageUpload() {
     }
 }
 
-function cleanFormValues(formValues) {
-    const recipe = { ...formValues };
-
-    if (!formValues.photo) {
-        recipe.photo = cache.get(recipe.id)?.photo;
+function getPhoto(formValues) {
+    // Prefer a valid Blob from the form
+    if (formValues.photo instanceof Blob) {
+        return formValues.photo;
     }
-    return recipe;
+
+    // Fallback: check cache for a preexisting
+    const cachedRecipe = cache.get(formValues.id);
+    if (cachedRecipe?.photo instanceof Blob) {
+        return cachedRecipe.photo;
+    }
+
+    // Otherwise, return null
+    return null;
 }
 
 function handleFormSubmission(event) {
     event.preventDefault();
 
-    const recipe = cleanFormValues(form.getValues());
+    const data = form.getValues();
+    const recipe = { ...data, photo: getPhoto(data) };
 
     if (form.id) {
         updateRecipe(recipe);

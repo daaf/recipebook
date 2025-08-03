@@ -100,18 +100,6 @@ export default class Form {
         }
     }
 
-    displayImagePreview() {
-        const img = this?.imgInput?.files[0];
-
-        console.log(this.imgPreview);
-
-        if (img) {
-            this.imgPreview.src = URL.createObjectURL(img);
-        } else {
-            this.imgPreview.src = '';
-        }
-    }
-
     #clearImagePreview() {
         this.imgPreview.src = '';
     }
@@ -144,7 +132,7 @@ export default class Form {
 
     getValues() {
         const recipeId = this.id || crypto.randomUUID();
-        const photoFile = this.imgInput.files[0] || null;
+        const photoFile = this.imgInput?.files?.[0] ?? null;
 
         return {
             id: recipeId,
