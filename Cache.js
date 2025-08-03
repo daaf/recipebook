@@ -20,9 +20,7 @@ export default class Cache {
     }
 
     add(...objects) {
-        objects.forEach((object) => {
-            this.#store.push(object);
-        });
+        this.#store.push(...objects);
         this.#fireUpdateEvent();
     }
 
@@ -43,7 +41,7 @@ export default class Cache {
         const storedObjectCount = storedObjects.length;
 
         if (storedObjects && storedObjectCount && db.connection) {
-            this.#store.push(...storedObjects);
+            this.add(...storedObjects);
             console.log(
                 `Restored ${storedObjectCount} ${
                     storedObjectCount === 1 ? 'item' : 'items'
