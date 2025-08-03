@@ -22,7 +22,7 @@ export default class Database {
                 objectStore.createIndex('id', 'id', { unique: true });
 
                 objectStore.transaction.oncomplete = () =>
-                    this.mirrorRecipesToDb();
+                    this.preloadData(data);
             };
 
             request.onsuccess = (event) => {
@@ -129,16 +129,12 @@ export default class Database {
         });
     }
 
-    async mirrorRecipesToDb() {
-        return await this.addMultiple(recipes);
-    }
-
-    async preloadData() {
+    async preloadData(data) {
         return await this.addMultiple(data);
     }
 
     async addMultiple(data) {
-        if (!data.length) {
+        if (!data?.length) {
             console.log('No data provided for save to database');
             return;
         }
