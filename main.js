@@ -1,5 +1,8 @@
-import { recipes, Database } from './datastore.js';
+import Database from './Database.js';
+import Cache from './Cache.js';
 import OptionsMenu from './OptionsMenu.js';
+
+import { getObjectById } from './utils.js';
 
 const addRecipeButton = document.querySelector('#add-recipe');
 const recipeForm = document.querySelector('#add-update-recipe');
@@ -12,21 +15,24 @@ const modalOuterElement = document.querySelector('.modal-outer');
 const modalInnerElement = document.querySelector('.modal-inner');
 const modalHeader = modalInnerElement.querySelector('h2');
 
+/*---------- CREATE IN-MEMORY CACHE ----------*/
+const cache = new Cache();
+
 /*---------- CONNECT TO DATABASE ----------*/
 const db = new Database();
 await db.connect();
 
 const fireUpdateEvent = () => {
-    recipeListElement.dispatchEvent(new CustomEvent('recipesUpdated'));
+    window.dispatchEvent(new CustomEvent('recipesUpdated'));
 };
 
 async function restoreRecipesFromDatabase() {
     const storedRecipes = await db.getAll();
 
     if (storedRecipes && storedRecipes.length) {
-        recipes.push(...storedRecipes);
-        console.log(recipes);
-        fireUpdateEvent();
+        // recipes.push(...storedRecipes);
+        cache.add(...storedRecipes);
+        console.log(storedRecipes);
     }
 }
 
@@ -43,33 +49,19 @@ async function restoreRecipesFromDatabase() {
 /* ---------- DATA OPERATIONS - BOTH IN-MEMORY & DATABASE ---------- */
 
 function addRecipe(recipe) {
-    recipes.push(recipe);
+    cache.add(recipe);
     db.put(recipe);
-    fireUpdateEvent();
 }
 
 function updateRecipe(recipe) {
-    const index = getRecipeIndexById(recipe.id);
-    recipes[index] = recipe;
+    cache.update(recipe);
     db.put(recipe);
-    fireUpdateEvent();
 }
 
 function deleteRecipe(id) {
-    const index = getRecipeIndexById(id);
-    recipes.splice(index, 1);
+    cache.delete(id);
     db.delete(id);
-    fireUpdateEvent();
 }
-
-/* ---------- GET DATA IN MEMORY ---------- */
-
-const matchRecipeIds = (recipeId) => (recipe) => recipe.id === recipeId;
-
-const getRecipeById = (recipeId) => recipes.find(matchRecipeIds(recipeId));
-
-const getRecipeIndexById = (recipeId) =>
-    recipes.findIndex(matchRecipeIds(recipeId));
 
 /* ---------- DEFINE UI COMPONENTS ---------- */
 
@@ -148,7 +140,7 @@ function getRecipeCardListHtml(recipes) {
 /* Update state of recipe list */
 
 function displayRecipeCards() {
-    const html = getRecipeCardListHtml(recipes);
+    const html = getRecipeCardListHtml(cache.contents);
     recipeListElement.innerHTML = html;
 }
 
@@ -187,7 +179,7 @@ function populateAddForm() {
 }
 
 function populateEditForm(recipeId) {
-    const recipe = getRecipeById(recipeId);
+    const recipe = getObjectById(cache.contents, recipeId);
 
     modalHeader.textContent = 'Edit recipe';
     recipeForm.setAttribute('data-id', recipeId);
@@ -227,7 +219,9 @@ const getValuesFromFieldset = (fieldset) =>
 const getValuesFromForm = (form) => {
     const recipeId = form.dataset.id || crypto.randomUUID();
     const photoFile =
-        imgInput.files[0] || getRecipeById(recipeId)?.photo || null;
+        imgInput.files[0] ||
+        getObjectById(cache.contents, recipeId)?.photo ||
+        null;
 
     return {
         id: recipeId,
@@ -267,7 +261,7 @@ function getInputAttributesBasedOnFieldset(fieldset) {
 
 function handleOptionsClick(event) {
     const optionsMenu = new OptionsMenu(event);
-    optionsMenu.toggleMenuState();
+    optionsMenu.toggleState();
 }
 
 function handleEditClick(event) {
@@ -362,8 +356,8 @@ addRecipeButton.addEventListener('click', displayAddForm);
 imgInput.addEventListener('change', handleImagePreview);
 recipeForm.addEventListener('submit', handleFormSubmission);
 recipeListElement.addEventListener('click', handleRecipeClick);
-recipeListElement.addEventListener('recipesUpdated', displayRecipeCards);
 modalOuterElement.addEventListener('click', handleModalClick);
+window.addEventListener('cacheUpdated', displayRecipeCards);
 window.addEventListener('keydown', handleKeyDown);
 
 /* ---------- INITIALIZATION ---------- */
