@@ -4,9 +4,7 @@ const DB_NAME = 'RecipeBookDB';
 const DB_VERSION = 1;
 const OBJECT_STORE_NAME = 'recipes';
 
-const recipes = [];
-
-class Database {
+export default class Database {
     constructor() {
         this.connection = null;
     }
@@ -154,5 +152,3 @@ class Database {
         }
     }
 }
-
-export { Database, recipes };
