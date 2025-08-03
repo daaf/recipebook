@@ -1,3 +1,5 @@
+import data from './preload.js';
+
 const DB_NAME = 'RecipeBookDB';
 const DB_VERSION = 1;
 const OBJECT_STORE_NAME = 'recipes';
@@ -130,21 +132,25 @@ class Database {
     }
 
     async mirrorRecipesToDb() {
-        if (!recipes.length) {
-            console.log('No data to mirror to database');
+        return await this.addMultiple(recipes);
+    }
+
+    async preloadData() {
+        return await this.addMultiple(data);
+    }
+
+    async addMultiple(data) {
+        if (!data.length) {
+            console.log('No data provided for save to database');
             return;
         }
 
         try {
-            const results = await Promise.all(
-                recipes.map((recipe) => this.put(recipe))
-            );
-            console.log('Recipes mirrored to IndexedDB successfully');
+            const results = await Promise.all(data.map((row) => this.put(row)));
+            console.log('Recipes saved to IndexedDB successfully');
             return results;
         } catch (error) {
-            console.error(
-                `Error while mirroring recipes to DB: ${error.message}`
-            );
+            console.error(`Error while saving recipes to DB: ${error.message}`);
         }
     }
 }
