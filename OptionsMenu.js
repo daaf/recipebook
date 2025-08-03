@@ -16,7 +16,7 @@ export default class OptionsMenu {
         this.optionList.classList.toggle('show');
     }
 
-    toggleMenuState() {
+    toggleState() {
         this.#toggleOptionsButtonState();
         this.#toggleOptionsElementState();
     }
