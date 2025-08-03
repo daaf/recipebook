@@ -1,4 +1,5 @@
 import { recipes, Database } from './datastore.js';
+import OptionsMenu from './OptionsMenu.js';
 
 const addRecipeButton = document.querySelector('#add-recipe');
 const recipeForm = document.querySelector('#add-update-recipe');
@@ -30,8 +31,11 @@ async function restoreRecipesFromDatabase() {
 }
 
 /* TODOs:
+- Open modal to see full recipe. Triggered by:
+    - Click on card image 
+    - Click on e.g. 'see more' link at bottom of card
+- Close recipe options menu on click outside
 - Add search to filter list of recipes
-- Click e.g. 'see more' to open modal to see full recipe.
 - Format recipe text: Capitalize first letter of each field, undoubtedly more...
 - All styling :)
 */
@@ -141,25 +145,6 @@ function getRecipeCardListHtml(recipes) {
 
 /* Update state of recipe options menu */
 
-function toggleOptionsButtonState(event) {
-    const seeOptionsButton = event.target
-        .closest('.recipe-card')
-        .querySelector('.see-options');
-    seeOptionsButton.classList.toggle('menu-open');
-}
-
-function toggleOptionsMenuState(event) {
-    const optionsElement = event.target
-        .closest('.recipe-card')
-        .querySelector('.options');
-    optionsElement.classList.toggle('show');
-}
-
-function toggleOptionsState(event) {
-    toggleOptionsButtonState(event);
-    toggleOptionsMenuState(event);
-}
-
 /* Update state of recipe list */
 
 function displayRecipeCards() {
@@ -227,6 +212,8 @@ function displayEditForm(recipeId) {
 
 const toggleModalState = () => modalOuterElement.classList.toggle('open');
 
+const closeModal = () => modalOuterElement.classList.remove('open');
+
 /* ---------- GET DATA FROM THE DOM ---------- */
 
 const getInputsInFieldset = (fieldset) =>
@@ -278,13 +265,20 @@ function getInputAttributesBasedOnFieldset(fieldset) {
 
 /* Recipe card event handlers */
 
-function handleEditClick(event, recipeId) {
-    toggleOptionsState(event);
+function handleOptionsClick(event) {
+    const optionsMenu = new OptionsMenu(event);
+    optionsMenu.toggleMenuState();
+}
+
+function handleEditClick(event) {
+    const recipeId = event.target.closest('.recipe-card')?.dataset.id;
+    handleOptionsClick(event);
     displayEditForm(recipeId);
 }
 
-function handleDeleteClick(event, recipeId) {
-    toggleOptionsState(event);
+function handleDeleteClick(event) {
+    const recipeId = event.target.closest('.recipe-card')?.dataset.id;
+    handleOptionsClick(event);
     deleteRecipe(recipeId);
 }
 
@@ -292,9 +286,9 @@ function handleRecipeClick(event) {
     const recipeId = event.target.closest('.recipe-card')?.dataset.id;
 
     if (event.target.matches('.see-options')) {
-        toggleOptionsState(event);
+        handleOptionsClick(event);
     } else if (event.target.matches('.edit-recipe')) {
-        handleEditClick(event, recipeId);
+        handleEditClick(event);
     } else if (event.target.matches('.delete-recipe')) {
         handleDeleteClick(event, recipeId);
     }
@@ -302,28 +296,12 @@ function handleRecipeClick(event) {
 
 /* Modal event handlers */
 
-function closeModal() {
+function handleModalClose() {
+    closeModal();
     clearRecipeForm();
-    toggleModalState();
 }
 
-function handleModalClick(event) {
-    const isInInnerModal = event.target.closest('.modal-inner');
-
-    if (!isInInnerModal || event.target.matches('button[name="cancel"]')) {
-        closeModal();
-    } else if (event.target.matches('.add-input')) {
-        handleAddInputClick(event);
-    }
-}
-
-const handleKeyDown = (event) => {
-    event.key === 'Escape' && closeModal();
-};
-
-/* Form event handlers */
-
-const handleAddInputClick = (event) => {
+const handleAddInput = (event) => {
     const previousSibling = event.target.previousElementSibling;
 
     if (previousSibling.matches('fieldset')) {
@@ -331,14 +309,40 @@ const handleAddInputClick = (event) => {
     }
 };
 
-function handleAdd(event) {
-    const recipe = getValuesFromForm(event.currentTarget);
-    addRecipe(recipe);
+function handleModalClick(event) {
+    const isInInnerModal = event.target.closest('.modal-inner');
+
+    if (!isInInnerModal || event.target.matches('button[name="cancel"]')) {
+        handleModalClose();
+    } else if (event.target.matches('.add-input')) {
+        handleAddInput(event);
+    }
+}
+
+const handleKeyDown = (event) => {
+    event.key === 'Escape' && handleModalClose();
+};
+
+/* Form event handlers */
+
+function handleImagePreview() {
+    const img = imgInput.files[0];
+
+    if (img) {
+        imgPreview.src = URL.createObjectURL(img);
+    } else {
+        imgPreview.src = '';
+    }
 }
 
 function handleUpdate(event) {
     const recipe = getValuesFromForm(event.currentTarget);
     updateRecipe(recipe);
+}
+
+function handleAdd(event) {
+    const recipe = getValuesFromForm(event.currentTarget);
+    addRecipe(recipe);
 }
 
 function handleFormSubmission(event) {
@@ -349,17 +353,7 @@ function handleFormSubmission(event) {
     } else {
         handleAdd(event);
     }
-    closeModal();
-}
-
-function handleImagePreview() {
-    const img = imgInput.files[0];
-
-    if (img) {
-        imgPreview.src = URL.createObjectURL(img);
-    } else {
-        imgPreview.src = '';
-    }
+    handleModalClose();
 }
 
 /* ---------- EVENT LISTENERS ---------- */
