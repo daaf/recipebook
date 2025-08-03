@@ -1,11 +1,11 @@
 export default class OptionsMenu {
     constructor(event) {
         this.button = event.target
-            .closest('.recipe-card')
-            .querySelector('.see-options');
+            ?.closest('.recipe-card')
+            ?.querySelector('.see-options');
         this.optionList = event.target
-            .closest('.recipe-card')
-            .querySelector('.options');
+            ?.closest('.recipe-card')
+            ?.querySelector('.options');
     }
 
     #toggleOptionsButtonState() {
@@ -17,7 +17,7 @@ export default class OptionsMenu {
     }
 
     toggleState() {
-        this.#toggleOptionsButtonState();
-        this.#toggleOptionsElementState();
+        this.button && this.#toggleOptionsButtonState();
+        this.optionList && this.#toggleOptionsElementState();
     }
 }
