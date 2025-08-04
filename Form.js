@@ -1,16 +1,26 @@
 export default class Form {
     constructor() {
-        this.element = document.querySelector('#add-update-recipe');
         this.id = null;
+        this.element = document.querySelector('#add-update-recipe');
         this.name = this.element.querySelector('#name');
-        this.description = this.element.querySelector('#description');
-        this.imgInput = this.element.querySelector('#img-input');
-        this.imgPreview = this.element.querySelector('#img-preview');
-        this.ingredients = this.element.querySelector('#ingredients');
-        this.instructions = this.element.querySelector('#instructions');
-        this.fieldsets = this.element.querySelectorAll('fieldset');
-        this.addInputButtons = this.element.querySelectorAll('.add-input');
-        this.cancelButton = this.element.querySelector('button[name="cancel"]');
+        this.description = this.element?.querySelector('#description');
+        this.imgInput = this.element?.querySelector('#img-input');
+        this.imgPreview = this.element?.querySelector('#img-preview');
+        this.ingredients = this.element?.querySelector('#ingredients');
+        this.instructions = this.element?.querySelector('#instructions');
+        this.fieldsets = this.element?.querySelectorAll('fieldset');
+        this.addInputButtons = this.element?.querySelectorAll('.add-input');
+        this.cancelButton = this.element?.querySelector(
+            'button[name="cancel"]'
+        );
+    }
+
+    toggleState() {
+        this.element.classList.toggle('open');
+    }
+
+    close() {
+        this.element.classList.remove('open');
     }
 
     #roundUpToFillColumns(initialFieldCount, columnCount) {
@@ -18,6 +28,9 @@ export default class Form {
     }
 
     #getGridColumnCount(element) {
+        if (!element) {
+            throw new Error('Element is null in #getGridColumnCount');
+        }
         return getComputedStyle(element).gridTemplateColumns.split(' ').length;
     }
 
@@ -90,6 +103,7 @@ export default class Form {
         } else {
             this.#populateAddForm();
         }
+        this.toggleState();
     }
 
     addInputs(clickedButton) {
@@ -115,6 +129,7 @@ export default class Form {
         this.element.removeAttribute('data-id');
         this.id = null;
         this.#clearImagePreview();
+        this.close();
         this.fieldsets.forEach(this.#clearFieldsFromFieldset);
     }
 

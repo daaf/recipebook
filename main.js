@@ -4,8 +4,6 @@ import Modal from './Modal.js';
 import Form from './Form.js';
 import OptionsMenu from './OptionsMenu.js';
 
-import { getObjectById } from './utils.js';
-
 const addRecipeButton = document.querySelector('#add-recipe');
 const recipeListElement = document.querySelector('.recipe-list');
 
@@ -95,23 +93,35 @@ function getRecipeCardListHtml(recipes) {
     return recipes.map(getRecipeCardHtml).join('');
 }
 
-// function displayFullRecipe(recipe) {
-//     const html =
-//         `<div class="recipe" data-id="${recipe.id}">
-//             <h2 class="recipe-name">${recipe.name}</h2>
-//             <p>${recipe.description}</p>
-//             <h3>Ingredients</h3>
-//             <ul class="recipe-ingredients">${recipe.ingredients.map((ingredient) =>
-//                 `<li>${ingredient}</li>`).join('')}</ul>
-//             <h3>Instructions</h3>
-//             <ol class="recipe-instructions">${
-//                 recipe.instructions.map((step) => `<li>${step}</li>`).join('')
-//             }</ol>
-//             <button class="edit-recipe">Edit</button>
-//             <button class="delete-recipe">Delete</button>
-//         </div>`
-//     // display in modal??
-// }
+function getRecipeHtml(recipe) {
+    let imgSrc = './assets/icons/fast-food-100.png';
+
+    if (recipe.photo instanceof Blob) {
+        try {
+            imgSrc = URL.createObjectURL(recipe.photo);
+        } catch (error) {
+            console.warn('Failed to create image URL from photo Blob', error);
+        }
+    }
+
+    return `<div class="recipe" data-id="${recipe.id}">
+            <img src="${imgSrc}" ${
+        recipe.photo ? '' : 'class="placeholder"'
+    } alt="${recipe.name}" />
+            <h2 class="recipe-name">${recipe.name}</h2>
+            <p>${recipe.description}</p>
+            <h3>Ingredients</h3>
+            <ul class="recipe-ingredients">${recipe.ingredients
+                .map((ingredient) => `<li>${ingredient}</li>`)
+                .join('')}</ul>
+            <h3>Instructions</h3>
+            <ol class="recipe-instructions">${recipe.instructions
+                .map((step) => `<li>${step}</li>`)
+                .join('')}</ol>
+            <button class="edit-recipe">Edit</button>
+            <button class="delete-recipe">Delete</button>
+        </div>`;
+}
 
 /* ---------- UPDATE THE STATE OF THE DOM ---------- */
 
@@ -135,6 +145,13 @@ function displayEditForm(recipeId) {
     modal.toggleState();
 }
 
+function displayRecipe(recipeId) {
+    const recipe = cache.get(recipeId);
+    modal.header = `${recipe.name}`;
+    modal.innerHtml = getRecipeHtml(recipe);
+    modal.toggleState();
+}
+
 /* ---------- EVENT HANDLERS ---------- */
 
 /* Recipe card event handlers */
@@ -142,6 +159,11 @@ function displayEditForm(recipeId) {
 function handleRecipeClick(event) {
     const optionsMenu = new OptionsMenu(event);
     const recipeId = event.target.closest('.recipe-card')?.dataset.id;
+
+    if (event.target.closest('.recipe-card-img-container')) {
+        displayRecipe(recipeId);
+        return;
+    }
 
     if (event.target.matches('.see-options')) {
         optionsMenu.toggleState();
@@ -223,8 +245,8 @@ function handleFormSubmission(event) {
 /* ---------- EVENT LISTENERS ---------- */
 
 addRecipeButton.addEventListener('click', displayAddForm);
-form.imgInput.addEventListener('change', handleImageUpload);
-form.element.addEventListener('submit', handleFormSubmission);
+form.imgInput?.addEventListener('change', handleImageUpload);
+form.element?.addEventListener('submit', handleFormSubmission);
 recipeListElement.addEventListener('click', handleRecipeClick);
 modal.outer.addEventListener('click', handleModalClick);
 window.addEventListener('cacheUpdated', displayRecipeCards);
