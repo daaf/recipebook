@@ -169,19 +169,11 @@ li {
 }
 
 #add-update-recipe {
-    display: none;
-}
-
-#add-update-recipe.open {
     display: grid;
 }
 
 #add-update-recipe * {
     width: 100%;
-}
-
-#add-update-recipe:not(.open) * {
-    display: none;
 }
 
 #ingredients {
@@ -209,7 +201,7 @@ li {
     margin: 20px;
 }
 
-.recipe-list {
+#recipe-card-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     grid-template-rows: repeat(auto-fit, minmax(350px, 1fr));
@@ -222,7 +214,7 @@ li {
     border-radius: var(--corner-radius-medium);
 }
 
-.recipe-card-img-container {
+.recipe-card .img-container {
     width: 100%;
     height: 225px;
     background-color: var(--light-grey);

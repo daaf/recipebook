@@ -1,5 +1,3 @@
-import { getObjectById, getObjectIndexById } from './utils.js';
-
 export default class Cache {
     #store = [];
 
@@ -11,12 +9,18 @@ export default class Cache {
         return [...this.#store];
     }
 
+    #matchIds = (id) => (obj) => obj.id === id;
+
+    #getObjectById = (array, id) => array.find(this.#matchIds(id));
+
+    #getObjectIndexById = (array, id) => array.findIndex(this.#matchIds(id));
+
     #fireUpdateEvent() {
         window.dispatchEvent(this.updateEvent);
     }
 
     get(id) {
-        return getObjectById(this.contents, id);
+        return this.#getObjectById(this.contents, id);
     }
 
     add(...objects) {
@@ -25,13 +29,13 @@ export default class Cache {
     }
 
     update(object) {
-        const index = getObjectIndexById(this.contents, object.id);
+        const index = this.#getObjectIndexById(this.contents, object.id);
         this.#store[index] = object;
         this.#fireUpdateEvent();
     }
 
     delete(id) {
-        const index = getObjectIndexById(this.contents, id);
+        const index = this.#getObjectIndexById(this.contents, id);
         this.#store.splice(index, 1);
         this.#fireUpdateEvent();
     }
