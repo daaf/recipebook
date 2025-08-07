@@ -112,7 +112,12 @@ export default class Controller {
         const existingRecipe = this.model.cache.get(recipeId) || null;
 
         const formData = this.view.getFormValues();
-        const uploadedPhoto = formData.get('img-input') ?? null;
+        const uploadedImage = formData.get('img-input') ?? null;
+        const photo = uploadedImage.size
+            ? uploadedImage
+            : existingRecipe?.photo;
+
+        console.log({ existingRecipe, formData, uploadedImage });
 
         return {
             id: recipeId,
@@ -120,7 +125,7 @@ export default class Controller {
             description: formData.get('description') || null,
             ingredients: this.view.getFieldsetValues('ingredients'),
             instructions: this.view.getFieldsetValues('instructions'),
-            photo: uploadedPhoto || existingRecipe?.photo || null,
+            photo: photo || null,
         };
     }
 }
