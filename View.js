@@ -62,9 +62,10 @@ export default class View {
     }
 
     #createRecipeCard(recipe) {
-        const div = document.createElement('div');
-        div.className = 'recipe-card';
-        div.dataset.id = recipe.id;
+        const div = this.createElement('div', {
+            class: 'recipe-card',
+            'data-id': recipe.id,
+        });
 
         const imgSrc = this.#getImageSrc(recipe.photo) || this.defaultImgSrc;
 
@@ -147,9 +148,10 @@ export default class View {
     }
 
     #createFullRecipe(recipe) {
-        const div = document.createElement('div');
-        div.className = 'recipe';
-        div.dataset.id = recipe.id;
+        const div = this.createElement('div', {
+            class: 'recipe',
+            'data-id': recipe.id,
+        });
 
         const imgSrc = this.#getImageSrc(recipe.photo) || this.defaultImgSrc;
 
@@ -173,8 +175,7 @@ export default class View {
     }
 
     #createModal() {
-        const outer = document.createElement('div');
-        outer.classList.add('modal-outer');
+        const outer = this.createElement('div', { class: 'modal-outer' });
         outer.innerHTML = `
             <div class="modal-inner">
                 <h2 class="modal-title"></h2>
@@ -184,11 +185,14 @@ export default class View {
     }
 
     #createForm(recipe) {
-        const form = document.createElement('form');
-        form.id = 'add-update-recipe';
-        form.setAttribute('aria-label', 'Create or update recipe');
-        recipe && form.setAttribute('data-id', recipe.id);
+        const attributes = {
+            id: 'add-update-recipe',
+            'aria-label': 'Create or update recipe',
+        };
 
+        if (recipe) attributes['data-id'] = recipe.id;
+
+        const form = this.createElement('form', attributes);
         const imgSrc = this.#getImageSrc(recipe?.photo) || '';
 
         form.innerHTML = `
@@ -268,7 +272,7 @@ export default class View {
                 <button
                     type="button"
                     name="cancel"
-                    class="cancel"
+                    class="cancel button-secondary"
                     aria-label="Discard changes"
                     >
                     Cancel
@@ -276,7 +280,7 @@ export default class View {
                     <button
                     type="submit"
                     name="submit"
-                    class="submit"
+                    class="submit button-primary"
                     aria-label="Save recipe"
                 >
                     Save
