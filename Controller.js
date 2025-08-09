@@ -54,8 +54,9 @@ export default class Controller {
         this.view.addTextInputsToFieldset(fieldset);
     };
 
-    handlePreviewImage = (image) => {
-        this.view.setImagePreview(image);
+    handlePreviewImage = (image, alt, recipeId) => {
+        const recipeName = this.model.cache.get(recipeId).name;
+        this.view.setImagePreview(image, alt || recipeName);
     };
 
     handleResetImage = (recipeId) => {

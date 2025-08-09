@@ -210,7 +210,7 @@ export default class View {
                             id="img-preview"
                             ${
                                 imgSrc
-                                    ? `alt="Preview of selected image: ${imgSrc}"`
+                                    ? `alt="Preview of selected image: ${recipe.name}"`
                                     : ''
                             }
                             height="200"
@@ -398,6 +398,10 @@ export default class View {
             .map((input) => input.value);
     }
 
+    getInputsInFieldset(fieldsetId) {
+        this.form.querySelectorAll(`#${fieldsetId} input`);
+    }
+
     getImagePreview() {
         if (this.form) {
             return this.form.querySelector('#img-preview');
@@ -412,7 +416,9 @@ export default class View {
             src = this.#getImageSrc(img);
         } else if (!alt) {
             imagePreview.removeAttribute('alt');
-        } else if (src) {
+        }
+
+        if (src) {
             imagePreview.alt = `Preview of selected image: ${alt}`;
         }
 
@@ -491,7 +497,9 @@ export default class View {
     #getPreviewImageListener(handler) {
         return (event) => {
             const image = event.currentTarget.files[0];
-            handler(image);
+            const alt = event.currentTarget.name.value;
+            const id = this.#getIdByChildElement(event.currentTarget);
+            handler(image, alt, id);
         };
     }
 
