@@ -55,23 +55,22 @@ export default class Controller {
     };
 
     handlePreviewImage = (image, alt, recipeId) => {
-        const recipeName = this.model.cache.get(recipeId).name;
+        const recipeName = this.model.cache.get(recipeId)?.name;
         this.view.setImagePreview(image, alt || recipeName);
     };
 
     handleResetImage = (recipeId) => {
         const updatedRecipe = { ...this.createRecipeFromForm(), photo: null };
-        const mode = this.view.getFormMode();
         this.view.resetForm();
         this.view.setImagePreview();
-        this.view.populateForm(mode, updatedRecipe);
+        this.view.populateForm(this.view.formMode, updatedRecipe);
     };
 
     handleSubmit = (event) => {
         event.preventDefault();
-        const formValues = this.view.getFormValues();
+        const formValues = this.view.formValues;
         const recipe = this.createRecipeFromForm(formValues);
-        const mode = this.view.form.dataset.mode;
+        const mode = this.view.formMode;
 
         if (mode === 'add') {
             this.model.addRecipe(recipe);
@@ -100,17 +99,16 @@ export default class Controller {
 
     /* ---- HELPER FUNCTIONS ---- */
     createRecipeFromForm() {
-        const recipeId = this.view.form.dataset.id || crypto.randomUUID();
+        const recipeId = this.view.formId || crypto.randomUUID();
         const existingRecipe = this.model.cache.get(recipeId) || null;
-        const formData = this.view.getFormValues();
-        const formState = this.view.form?.dataset?.state;
+        const formData = this.view.formValues;
         const uploadedImage = formData.get('img-input') ?? null;
         let photo;
 
         if (uploadedImage.size) {
             photo = uploadedImage;
-        } else if (formState !== 'reset' && existingRecipe.photo) {
-            photo = existingRecipe.photo;
+        } else if (this.view.formState !== 'reset' && existingRecipe?.photo) {
+            photo = existingRecipe?.photo;
         } else {
             photo = null;
         }
