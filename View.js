@@ -680,13 +680,13 @@ export default class View {
         }
     }
     bindOpenOptionsMenu(handler) {
-        this.recipeCardContainer.addEventListener(
+        document.addEventListener(
             'click',
             this.#getOpenOptionsMenuListener(handler)
         );
     }
     bindCloseOptionsMenu(handler) {
-        this.recipeCardContainer.addEventListener(
+        document.addEventListener(
             'click',
             this.#getCloseOptionsMenuListener(handler)
         );
