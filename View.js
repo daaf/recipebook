@@ -48,8 +48,15 @@ export default class View {
 
     createElement(tag, attributes) {
         const element = document.createElement(tag);
-        if (attributes?.id) element.id = attributes.id;
-        if (attributes?.className) element.classList.add(attributes.className);
+        Object.entries(attributes).forEach(([attribute, value]) => {
+            try {
+                element.setAttribute(attribute, value);
+            } catch (error) {
+                console.log(
+                    `Error setting attribute ${attribute} with value ${value}`
+                );
+            }
+        });
 
         return element;
     }
@@ -185,6 +192,7 @@ export default class View {
         const imgSrc = this.#getImageSrc(recipe?.photo) || '';
 
         form.innerHTML = `
+            <label for="name" class="visually-hidden">Recipe name</label>
             <input
                 type="text"
                 id="name"
@@ -367,12 +375,17 @@ export default class View {
             ).fill('');
 
             [...values, ...extraValuesToFillColumns].forEach((value, index) => {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.name = index;
-                input.maxLength = 48;
-                input.value = value;
-                fieldset.appendChild(input);
+                const input = this.createElement('input', {
+                    type: 'text',
+                    name: index,
+                    maxLength: 48,
+                    value,
+                });
+                const label = this.createElement('label', {
+                    for: `${index}`,
+                    class: 'visually-hidden',
+                });
+                fieldset.append(label, input);
             });
         } else {
             console.log('No form present in DOM');
