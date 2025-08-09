@@ -36,8 +36,20 @@ export default class View {
         this._form = value;
     }
 
-    get formResetState() {
-        return this?.form?.dataset?.reset;
+    get formState() {
+        return this?.form?.dataset?.state;
+    }
+
+    get formMode() {
+        return this?.form?.dataset?.mode || null;
+    }
+
+    get formId() {
+        return this?.form?.dataset?.id || null;
+    }
+
+    get formValues() {
+        return this.form ? new FormData(this.form) : null;
     }
 
     getElement(selector) {
@@ -394,18 +406,6 @@ export default class View {
         } else {
             console.log('No form present in DOM');
         }
-    }
-
-    getFormMode() {
-        if (this.form) {
-            return this.form?.dataset?.mode || null;
-        } else {
-            console.log('No form present in DOM');
-        }
-    }
-
-    getFormValues() {
-        return new FormData(this.form);
     }
 
     getFieldsetValues(fieldsetId) {
