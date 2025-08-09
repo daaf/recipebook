@@ -10,6 +10,9 @@ import Controller from './Controller.js';
     - Confirmation popups:
         - On submit: "recipe added" or "recipe deleted"
         - On delete confirmation: "recipe deleted"
+   BUGFIXES:
+    - Recipe cards sometimes change order when the page reloads after adding a new (maybe more than one?) recipe
+
 */
 
 const db = new Database();

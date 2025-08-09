@@ -36,6 +36,10 @@ export default class View {
         this._form = value;
     }
 
+    get formResetState() {
+        return this?.form?.dataset?.reset;
+    }
+
     getElement(selector) {
         const element = document.querySelector(selector);
 
@@ -97,7 +101,11 @@ export default class View {
         if (recipe.photo) {
             image.src = this.#getImageSrc(recipe.photo);
             image.classList?.remove('placeholder');
+        } else {
+            image.src = this.defaultImgSrc;
+            image.classList.add('placeholder');
         }
+
         cardHeader.textContent = recipe.name;
         ingredientsUL.innerHTML = '';
 
@@ -185,24 +193,43 @@ export default class View {
                 placeholder="My awesome recipe"
                 value="${recipe?.name || ''}"
                 required
-                /><textarea
-                id="description"
-                name="description"
-                aria-label="Recipe description"
-                placeholder="Description (optional)"
-                >${recipe?.description || ''}</textarea>
-                <input
-                type="file"
-                id="img-input"
-                name="img-input"
-                aria-label="Upload a recipe image"
-                accept="image/jpeg, image/png, image/jpg"
-            /><img
-                src="${imgSrc}"
-                id="img-preview"
-                ${imgSrc ? `alt="Preview of selected image: ${imgSrc}"` : ''}
-                height="200"
-            />
+                />
+                <div class="two-column">
+                    <div class="description-container">
+                        <label for="description">Description</label>
+                        <textarea
+                        id="description"
+                        name="description"
+                        aria-label="Recipe description"
+                        >${recipe?.description || ''}</textarea>
+                    </div>
+                    <div class="img-upload">
+                        <h3>Photo</h2>
+                        <img
+                            src="${imgSrc}"
+                            id="img-preview"
+                            ${
+                                imgSrc
+                                    ? `alt="Preview of selected image: ${imgSrc}"`
+                                    : ''
+                            }
+                            height="200"
+                        />
+                        <input
+                        type="file"
+                        id="img-input"
+                        class="visually-hidden"
+                        name="img-input"
+                        aria-label="Upload an image file"
+                        accept="image/jpeg, image/png, image/jpg"
+                        /><label for="img-input" class="label-button">${
+                            imgSrc ? 'Change' : 'Add'
+                        } photo</label>
+                        <button type="button" id="remove-img" ${
+                            imgSrc ? '' : 'disabled'
+                        }>Remove photo</button>
+                    </div>
+                </div>
             <fieldset
                 id="ingredients"
                 data-child-class-list="ingredient"
@@ -252,6 +279,10 @@ export default class View {
         return form;
     }
 
+    createModal() {
+        this.modal = this.#createModal();
+    }
+
     openModal() {
         if (this.modal) {
             this.app.append(this.modal);
@@ -281,35 +312,51 @@ export default class View {
         }
     }
 
+    setModalContent(element) {
+        this.modal.querySelector('.modal-inner').append(element);
+    }
+
+    populateModal(title, element) {
+        this.setModalTitle(title);
+        this.setModalContent(element);
+    }
+
     openRecipe(recipe) {
-        this.modal = this.#createModal();
-        const recipeElement = this.#createFullRecipe(recipe);
-        this.modalInner.append(recipeElement);
-        this.setModalTitle(`${recipe.name}`);
+        if (this.modal) {
+            const recipeElement = this.#createFullRecipe(recipe);
+            this.populateModal(`${recipe.name}`, recipeElement);
+        }
     }
 
-    openForm(mode = 'add', recipe = null) {
-        this.modal = this.#createModal();
+    createForm(recipe) {
         this.form = this.#createForm(recipe);
-        this.form.setAttribute('data-mode', mode);
-        this.modalInner.append(this.form);
-        this.setModalTitle(`${this.#capitalizeFirstLetter(mode)} recipe`);
-        this.form.querySelectorAll('fieldset').forEach((fieldset) => {
-            const id = fieldset.id;
-            const values = recipe
-                ? recipe[id]
-                : new Array(
-                      this[`DEFAULT_${id.toUpperCase()}_INPUT_COUNT`]
-                  ).fill('');
-            this.addTextInputsToFieldset(id, values);
-        });
     }
 
-    addTextInputsToFieldset(fieldsetId, values = []) {
+    populateForm(mode = 'add', recipe = null) {
         if (this.form) {
-            const fieldset = this.form.querySelector(`#${fieldsetId}`);
+            this.form.setAttribute('data-mode', mode);
+            //TODO: Refactor to remove this modal operation from this method
+            this.populateModal(
+                `${this.#capitalizeFirstLetter(mode)} recipe`,
+                this.form
+            );
+            this.form.querySelectorAll('fieldset').forEach((fieldset) => {
+                const values = recipe
+                    ? recipe[fieldset.id]
+                    : new Array(
+                          this[
+                              `DEFAULT_${fieldset.id.toUpperCase()}_INPUT_COUNT`
+                          ]
+                      ).fill('');
+                this.addTextInputsToFieldset(fieldset, values);
+            });
+        }
+    }
+
+    addTextInputsToFieldset(fieldset, values = []) {
+        if (this.form) {
             const columnCount =
-                this[`${fieldsetId.toUpperCase()}_COLUMN_COUNT`];
+                this[`${fieldset.id.toUpperCase()}_COLUMN_COUNT`];
 
             const inputCountToFillColumns =
                 Math.ceil(values.length / columnCount) * columnCount ||
@@ -323,9 +370,18 @@ export default class View {
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.name = index;
+                input.maxLength = 48;
                 input.value = value;
                 fieldset.appendChild(input);
             });
+        } else {
+            console.log('No form present in DOM');
+        }
+    }
+
+    getFormMode() {
+        if (this.form) {
+            return this.form?.dataset?.mode || null;
         } else {
             console.log('No form present in DOM');
         }
@@ -342,17 +398,33 @@ export default class View {
             .map((input) => input.value);
     }
 
+    getImagePreview() {
+        if (this.form) {
+            return this.form.querySelector('#img-preview');
+        }
+    }
+
     setImagePreview(img, alt) {
+        const imagePreview = this.form.querySelector('#img-preview');
         let src = '';
 
-        if (this.form) {
+        if (img) {
             src = this.#getImageSrc(img);
-        }
-        if (src) {
-            const imagePreview = this.form.querySelector('#img-preview');
-            imagePreview.src = src;
+        } else if (!alt) {
+            imagePreview.removeAttribute('alt');
+        } else if (src) {
             imagePreview.alt = `Preview of selected image: ${alt}`;
         }
+
+        imagePreview.src = src;
+    }
+
+    resetForm() {
+        this.form.reset();
+        [...this.form.querySelectorAll('fieldset input')].forEach((input) =>
+            input.remove()
+        );
+        this.form.dataset.state = 'reset';
     }
 
     openOptionsMenu(recipeId) {
@@ -423,11 +495,20 @@ export default class View {
         };
     }
 
+    #getResetImageListener(handler) {
+        return (event) => {
+            if (event.target.matches('#remove-img')) {
+                const id = event.currentTarget?.id || null;
+                handler(id);
+            }
+        };
+    }
+
     #getAddInputListener(handler) {
         return (event) => {
             if (event.target.matches('.add-input')) {
-                const fieldsetId = event.target.previousElementSibling.id;
-                handler(fieldsetId);
+                const fieldset = event.target.previousElementSibling;
+                handler(fieldset);
             }
         };
     }
@@ -509,6 +590,22 @@ export default class View {
             imageInput.removeEventListener(
                 'change',
                 this.#getPreviewImageListener(handler)
+            );
+        }
+    }
+    bindResetImage(handler) {
+        if (this.form) {
+            this.form.addEventListener(
+                'click',
+                this.#getResetImageListener(handler)
+            );
+        }
+    }
+    unbindResetImage(handler) {
+        if (this.form) {
+            this.form.removeEventListener(
+                'click',
+                this.#getResetImageListener(handler)
             );
         }
     }
