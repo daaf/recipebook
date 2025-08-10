@@ -8,7 +8,7 @@ export default class View {
         this._modal = null;
         this._form = null;
         this.defaultImgSrc = './assets/icons/fast-food-100.png';
-        this.INGREDIENTS_COLUMN_COUNT = 2;
+        this.INGREDIENTS_COLUMN_COUNT = 3;
         this.INSTRUCTIONS_COLUMN_COUNT = 1;
         this.DEFAULT_INGREDIENTS_INPUT_COUNT = 8;
         this.DEFAULT_INSTRUCTIONS_INPUT_COUNT = 4;
@@ -60,15 +60,18 @@ export default class View {
 
     createElement(tag, attributes) {
         const element = document.createElement(tag);
-        Object.entries(attributes).forEach(([attribute, value]) => {
-            try {
-                element.setAttribute(attribute, value);
-            } catch (error) {
-                console.log(
-                    `Error setting attribute ${attribute} with value ${value}`
-                );
-            }
-        });
+
+        if (attributes) {
+            Object.entries(attributes).forEach(([attribute, value]) => {
+                try {
+                    element.setAttribute(attribute, value);
+                } catch (error) {
+                    console.log(
+                        `Error setting attribute ${attribute} with value ${value}`
+                    );
+                }
+            });
+        }
 
         return element;
     }
@@ -102,7 +105,8 @@ export default class View {
                     .map((ingredient) => `<li>${ingredient}</li>`)
                     .join('')}
                 </ul>
-            </div>`;
+                </div>
+                <a href="#" class="read-more">Read more &rarr;</a>`;
 
         return div;
     }
@@ -168,20 +172,28 @@ export default class View {
         const imgSrc = this.#getImageSrc(recipe.photo) || this.defaultImgSrc;
 
         div.innerHTML = `
-                <img src="${imgSrc}" class="${
+        <h2>${recipe.name}</h2>
+        <img src="${imgSrc}" class="${
             recipe.photo ? '' : 'placeholder'
         }" alt="${recipe.name}" />
-                <p>${recipe.description}</p>
+        ${recipe.description ? `<p>${recipe.description}</p>` : ''}
+        <section>
                 <h3>Ingredients</h3>
                 <ul class="recipe-ingredients">${recipe.ingredients
                     .map((ingredient) => `<li>${ingredient}</li>`)
                     .join('')}</ul>
-                <h3>Instructions</h3>
+        </section>
+        <section>
+        <h3>Instructions</h3>
                 <ol class="recipe-instructions">${recipe.instructions
                     .map((step) => `<li>${step}</li>`)
                     .join('')}</ol>
-                <button class="edit-recipe">Edit</button>
-                <button class="delete-recipe">Delete</button>`;
+        </section>
+                <div class="modal-actions">
+                    <button class="delete-recipe button-danger">Delete</button>
+                    <button class="edit-recipe button-primary">Edit</button>
+                </div>
+                `;
 
         return div;
     }
@@ -190,7 +202,6 @@ export default class View {
         const outer = this.createElement('div', { class: 'modal-outer' });
         outer.innerHTML = `
             <div class="modal-inner">
-                <h2 class="modal-title"></h2>
             </div>`;
 
         return outer;
@@ -228,7 +239,7 @@ export default class View {
                         >${recipe?.description || ''}</textarea>
                     </div>
                     <div class="img-upload">
-                        <h3>Photo</h2>
+                        <h3>Photo</h3>
                         <img
                             src="${imgSrc}"
                             id="img-preview"
@@ -239,19 +250,21 @@ export default class View {
                             }
                             height="200"
                         />
-                        <input
-                        type="file"
-                        id="img-input"
-                        class="visually-hidden"
-                        name="img-input"
-                        aria-label="Upload an image file"
-                        accept="image/jpeg, image/png, image/jpg"
-                        /><label for="img-input" class="label-button">${
-                            imgSrc ? 'Change' : 'Add'
-                        } photo</label>
-                        <button type="button" id="remove-img" ${
-                            imgSrc ? '' : 'disabled'
-                        }>Remove photo</button>
+                        <div id="img-upload-actions">
+                            <input
+                            type="file"
+                            id="img-input"
+                            class="visually-hidden"
+                            name="img-input"
+                            aria-label="Upload an image file"
+                            accept="image/jpeg, image/png, image/jpg"
+                            /><label for="img-input" class="label-button button-primary">${
+                                imgSrc ? 'Change' : 'Add photo'
+                            }</label>
+                            <button type="button" role="button" id="remove-img" class="button-deemphasize" ${
+                                imgSrc ? '' : 'disabled'
+                            }>Remove</button>
+                        </div>
                     </div>
                 </div>
             <fieldset
@@ -280,11 +293,11 @@ export default class View {
             >
                 +
             </button>
-            <div id="form-actions">
+            <div class="modal-actions">
                 <button
                     type="button"
                     name="cancel"
-                    class="cancel button-secondary"
+                    class="cancel button-deemphasize"
                     aria-label="Discard changes"
                     >
                     Cancel
@@ -340,15 +353,10 @@ export default class View {
         this.modal.querySelector('.modal-inner').append(element);
     }
 
-    populateModal(title, element) {
-        this.setModalTitle(title);
-        this.setModalContent(element);
-    }
-
     openRecipe(recipe) {
         if (this.modal) {
             const recipeElement = this.#createFullRecipe(recipe);
-            this.populateModal(`${recipe.name}`, recipeElement);
+            this.setModalContent(recipeElement);
         }
     }
 
@@ -360,10 +368,7 @@ export default class View {
         if (this.form) {
             this.form.setAttribute('data-mode', mode);
             //TODO: Refactor to remove this modal operation from this method
-            this.populateModal(
-                `${this.#capitalizeFirstLetter(mode)} recipe`,
-                this.form
-            );
+            this.setModalContent(this.form);
             this.form.querySelectorAll('fieldset').forEach((fieldset) => {
                 const values = recipe
                     ? recipe[fieldset.id]
@@ -495,7 +500,10 @@ export default class View {
     /* ---- EVENT LISTENER LOGIC ---- */
     #getOpenRecipeListener(handler) {
         return (event) => {
-            if (event.target.closest('.recipe-card .img-container')) {
+            if (
+                event.target.closest('.recipe-card .img-container') ||
+                event.target.matches('.read-more')
+            ) {
                 const id = this.#getIdByChildElement(event.target);
                 handler(id);
             }
