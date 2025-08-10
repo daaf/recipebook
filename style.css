@@ -1,6 +1,7 @@
 :root {
     --gap-small: 6px;
     --gap-medium: 20px;
+    --gap-large: 32px;
     --gap-wide: 72px;
     --border-radius-small: 4px;
     --border-radius-medium: 10px;
@@ -124,6 +125,7 @@ textarea {
 
 input {
     padding: 0.6em 0.6em 0.5em 0.9em;
+    height: 2.6em;
 }
 
 textarea {
@@ -302,18 +304,54 @@ li {
     grid-gap: var(--gap-small);
 }
 
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper .remove-input {
+    position: absolute;
+    right: 0px;
+    width: 40px;
+    height: 100%;
+    background-color: var(--lightest-grey);
+    border: 1px solid var(--light-grey);
+    border-radius: 0px var(--border-radius-medium) var(--border-radius-medium) 0;
+    color: var(--extra-medium-grey);
+}
+
 .two-column {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-gap: var(--gap-small);
+    grid-gap: var(--gap-large);
     margin-top: 20px;
+    align-items: start;
+}
+
+.two-column input {
+    width: 100%;
+}
+
+.two-column.main-left {
+    grid-template-columns: 2fr 1fr;
+}
+
+.two-column.main-right {
+    grid-template-columns: 1fr 2fr;
 }
 
 .description-container {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     grid-template-rows: 24px 1fr;
-    grid-gap: var(--gap-small);
-    padding-right: 24px;
+    row-gap: var(--gap-small);
+    justify-content: stretch;
+    height: 100%;
+    /* padding-right: 24px; */
+}
+
+.description-container textarea {
+    flex-grow: 1;
 }
 
 .img-upload {
@@ -343,7 +381,7 @@ li {
     display: flex;
     flex-direction: row;
     column-gap: var(--gap-small);
-    padding: 0px 5px 7px 0px;
+    padding: 0px 3px 3px 0px;
 }
 
 #img-upload-actions button,
@@ -374,7 +412,7 @@ li {
 
 #img-upload-actions .label-button {
     box-shadow: var(--box-shadow-accent-small);
-    flex-grow: 2.67;
+    flex-grow: 3.5;
     margin-right: var(--gap-small);
 }
 
@@ -382,9 +420,9 @@ li {
     color: var(--extra-medium-grey);
 }
 
-#ingredients {
+/* #ingredients {
     grid-template-columns: repeat(3, minmax(100px, 1fr));
-}
+} */
 
 /* Recipe styles */
 
@@ -425,10 +463,8 @@ li {
     position: relative;
     box-shadow: var(--box-shadow-neutral);
     border: 1px solid var(--light-grey);
-    border-top-left-radius: var(--border-radius-medium);
-    border-top-right-radius: var(--border-radius-medium);
-    border-bottom-left-radius: var(--border-radius-small);
-    border-bottom-right-radius: var(--border-radius-small);
+    border-radius: var(--border-radius-medium) var(--border-radius-medium)
+        var(--border-radius-small) var(--border-radius-small);
 }
 
 .recipe-card .img-container {

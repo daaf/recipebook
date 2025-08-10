@@ -54,6 +54,10 @@ export default class Controller {
         this.view.addTextInputsToFieldset(fieldset);
     };
 
+    handleRemoveInput = (element) => {
+        element.remove();
+    };
+
     handlePreviewImage = (image, alt, recipeId) => {
         const recipeName = this.model.cache.get(recipeId)?.name;
         this.view.setImagePreview(image, alt || recipeName);
@@ -66,8 +70,7 @@ export default class Controller {
         this.view.populateForm(this.view.formMode, updatedRecipe);
     };
 
-    handleSubmit = (event) => {
-        event.preventDefault();
+    handleSubmit = () => {
         const formValues = this.view.formValues;
         const recipe = this.createRecipeFromForm(formValues);
         const mode = this.view.formMode;
@@ -127,6 +130,7 @@ export default class Controller {
         this.view.bindPreviewImage(this.handlePreviewImage);
         this.view.bindResetImage(this.handleResetImage);
         this.view.bindAddInput(this.handleAddInput);
+        this.view.bindRemoveInput(this.handleRemoveInput);
         this.view.bindSubmit(this.handleSubmit);
         this.view.bindCloseModal(this.handleCloseModal);
     };
@@ -136,6 +140,7 @@ export default class Controller {
         this.view.unbindResetImage(this.handleResetImage);
         this.view.unbindSubmit(this.handleSubmit);
         this.view.unbindAddInput(this.handleAddInput);
+        this.view.unbindRemoveInput(this.handleRemoveInput);
         this.view.unbindCloseModal(this.handleCloseModal);
     };
 

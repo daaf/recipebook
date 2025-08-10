@@ -8,10 +8,6 @@ export default class View {
         this._modal = null;
         this._form = null;
         this.defaultImgSrc = './assets/icons/fast-food-100.png';
-        this.INGREDIENTS_COLUMN_COUNT = 3;
-        this.INSTRUCTIONS_COLUMN_COUNT = 1;
-        this.DEFAULT_INGREDIENTS_INPUT_COUNT = 8;
-        this.DEFAULT_INSTRUCTIONS_INPUT_COUNT = 4;
 
         this.app.append(this.recipeCardContainer);
     }
@@ -229,7 +225,7 @@ export default class View {
                 value="${recipe?.name || ''}"
                 required
                 />
-                <div class="two-column">
+                <div class="two-column main-left">
                     <div class="description-container">
                         <label for="description">Description</label>
                         <textarea
@@ -248,7 +244,7 @@ export default class View {
                                     ? `alt="Preview of selected image: ${recipe.name}"`
                                     : ''
                             }
-                            height="200"
+                            height="180"
                         />
                         <div id="img-upload-actions">
                             <input
@@ -267,32 +263,20 @@ export default class View {
                         </div>
                     </div>
                 </div>
-            <fieldset
-                id="ingredients"
-                data-child-class-list="ingredient"
-            >
-                <legend>Ingredients</legend>
-            </fieldset>
-            <button
-                type="button"
-                class="add-input"
-                aria-label="Add fields for more ingredients"
-            >
-                +
-            </button>
-            <fieldset
-                id="instructions"
-                data-child-class-list="step"
-            >
-                <legend>Instructions</legend>
-            </fieldset>
-            <button
-                type="button"
-                class="add-input"
-                aria-label="Add fields for more steps"
-            >
-                +
-            </button>
+                <div class="two-column main-right">
+                    <fieldset
+                        id="ingredients"
+                        data-child-class-list="ingredient"
+                    >
+                        <legend>Ingredients</legend>
+                    </fieldset>
+                    <fieldset
+                        id="instructions"
+                        data-child-class-list="step"
+                    >
+                        <legend>Instructions</legend>
+                    </fieldset>
+                </div>
             <div class="modal-actions">
                 <button
                     type="button"
@@ -370,13 +354,7 @@ export default class View {
             //TODO: Refactor to remove this modal operation from this method
             this.setModalContent(this.form);
             this.form.querySelectorAll('fieldset').forEach((fieldset) => {
-                const values = recipe
-                    ? recipe[fieldset.id]
-                    : new Array(
-                          this[
-                              `DEFAULT_${fieldset.id.toUpperCase()}_INPUT_COUNT`
-                          ]
-                      ).fill('');
+                const values = recipe?.[fieldset.id];
                 this.addTextInputsToFieldset(fieldset, values);
             });
         }
@@ -384,18 +362,18 @@ export default class View {
 
     addTextInputsToFieldset(fieldset, values = []) {
         if (this.form) {
-            const columnCount =
-                this[`${fieldset.id.toUpperCase()}_COLUMN_COUNT`];
-
-            const inputCountToFillColumns =
-                Math.ceil(values.length / columnCount) * columnCount ||
-                columnCount;
-
-            const extraValuesToFillColumns = new Array(
-                inputCountToFillColumns - values.length
-            ).fill('');
-
-            [...values, ...extraValuesToFillColumns].forEach((value, index) => {
+            const extraInput = [''];
+            [...values, ...extraInput].forEach((value, index) => {
+                const div = this.createElement('div', {
+                    class: 'input-wrapper',
+                });
+                const button = this.createElement('button', {
+                    type: 'button',
+                    role: 'button',
+                    class: 'remove-input',
+                    'aria-label': `Remove input ${index}`,
+                });
+                button.textContent = '×';
                 const input = this.createElement('input', {
                     type: 'text',
                     name: index,
@@ -406,7 +384,8 @@ export default class View {
                     for: `${index}`,
                     class: 'visually-hidden',
                 });
-                fieldset.append(label, input);
+                div.append(label, input, button);
+                fieldset.append(div);
             });
         } else {
             console.log('No form present in DOM');
@@ -493,10 +472,6 @@ export default class View {
         return null;
     }
 
-    #capitalizeFirstLetter(text) {
-        return [text[0].toUpperCase(), text.slice(1)].join('');
-    }
-
     /* ---- EVENT LISTENER LOGIC ---- */
     #getOpenRecipeListener(handler) {
         return (event) => {
@@ -539,10 +514,31 @@ export default class View {
 
     #getAddInputListener(handler) {
         return (event) => {
-            if (event.target.matches('.add-input')) {
-                const fieldset = event.target.previousElementSibling;
+            if (
+                event.target.matches('input') &&
+                event.target.parentElement.matches('.input-wrapper:last-child')
+            ) {
+                const fieldset = event.target.closest('fieldset');
                 handler(fieldset);
             }
+        };
+    }
+
+    #getRemoveInputListener(handler) {
+        return (event) => {
+            if (event.target.matches('.remove-input')) {
+                event.stopPropagation();
+                const parent = event.target.parentElement;
+                parent.remove();
+                // handler(parent);
+            }
+        };
+    }
+
+    #getSubmitListener(handler) {
+        return (event) => {
+            event.preventDefault();
+            handler();
         };
     }
 
@@ -561,6 +557,7 @@ export default class View {
                 !event.target.closest('.modal-inner') ||
                 event.target.matches('.cancel')
             ) {
+                event.stopPropagation();
                 handler();
             }
         };
@@ -645,7 +642,7 @@ export default class View {
     bindAddInput(handler) {
         if (this.form) {
             this.form.addEventListener(
-                'click',
+                'keypress',
                 this.#getAddInputListener(handler)
             );
         }
@@ -653,8 +650,24 @@ export default class View {
     unbindAddInput(handler) {
         if (this.form) {
             this.form.removeEventListener(
-                'click',
+                'keypress',
                 this.#getAddInputListener(handler)
+            );
+        }
+    }
+    bindRemoveInput(handler) {
+        if (this.form) {
+            this.form.addEventListener(
+                'click',
+                this.#getRemoveInputListener(handler)
+            );
+        }
+    }
+    unbindRemoveInput(handler) {
+        if (this.form) {
+            this.form.removeEventListener(
+                'click',
+                this.#getRemoveInputListener(handler)
             );
         }
     }
@@ -663,12 +676,18 @@ export default class View {
     }
     bindSubmit(handler) {
         if (this.form) {
-            this.form.addEventListener('submit', handler);
+            this.form.addEventListener(
+                'submit',
+                this.#getSubmitListener(handler)
+            );
         }
     }
     unbindSubmit(handler) {
         if (this.form) {
-            this.form.removeEventListener('submit', handler);
+            this.form.removeEventListener(
+                'submit',
+                this.#getSubmitListener(handler)
+            );
         }
     }
     bindCloseModal(handler) {
