@@ -309,8 +309,6 @@ export default class View {
         if (this.modal) {
             this.app.append(this.modal);
             this.modal.classList.add('open');
-        } else {
-            console.log('No modal present in the DOM');
         }
     }
 
@@ -321,16 +319,12 @@ export default class View {
             this.modal.classList.remove('open');
             this.modal.remove();
             this.modal = null;
-        } else {
-            console.log('No modal present in the DOM');
         }
     }
 
     setModalTitle(title) {
         if (this.modal) {
             this.modal.querySelector('.modal-title').textContent = title;
-        } else {
-            console.log('No modal present in the DOM');
         }
     }
 

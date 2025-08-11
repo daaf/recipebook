@@ -11,8 +11,6 @@ export default class Controller {
 
     /* ---- MODAL EVENT HANDLERS ---- */
     handleCloseModal = () => {
-        // this.unbindFormHandlers();
-        // this.unbindRecipeHandlers();
         this.view.closeModal();
         this.view.unbindAllListeners();
         this.bindDefaultHandlers();
