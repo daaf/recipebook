@@ -321,6 +321,10 @@ li {
     color: var(--extra-medium-grey);
 }
 
+.input-wrapper .remove-input:hover {
+    background-color: var(--medium-grey);
+}
+
 .two-column {
     display: grid;
     grid-gap: var(--gap-large);
