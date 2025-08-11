@@ -58,15 +58,20 @@ export default class Controller {
         const image = event.currentTarget.files[0];
         const alt = event.currentTarget.name.value;
         const recipe = this.getRecipeFromEvent(event);
+
+        if (!this.view.getImagePreview().hasAttribute('data-populated')) {
+            this.view.toggleImageAddButton();
+            this.view.toggleImageRemoveButton();
+        }
         this.view.setImagePreview(image, alt || recipe.name);
-        this.view.toggleImageRemoveButton();
     };
 
     handleResetImage = () => {
         const updatedRecipe = { ...this.createRecipeFromForm(), photo: null };
         this.view.resetForm();
-        this.view.setImagePreview();
         this.view.toggleImageRemoveButton();
+        this.view.toggleImageAddButton();
+        this.view.setImagePreview();
         this.view.populateForm(this.view.formMode, updatedRecipe);
     };
 

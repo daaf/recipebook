@@ -242,7 +242,7 @@ export default class View {
                             id="img-preview"
                             ${
                                 imgSrc
-                                    ? `alt="Preview of selected image: ${recipe.name}"`
+                                    ? `alt="Preview of selected image: ${recipe.name}" data-populated`
                                     : ''
                             }
                             height="180"
@@ -255,7 +255,7 @@ export default class View {
                             name="img-input"
                             aria-label="Upload an image file"
                             accept="image/jpeg, image/png, image/jpg"
-                            /><label for="img-input" class="label-button button-primary">${
+                            /><label for="img-input" id="add-img" class="label-button button-primary">${
                                 imgSrc ? 'Change' : 'Add photo'
                             }</label>
                             <button type="button" role="button" id="remove-img" class="button-deemphasize" ${
@@ -416,9 +416,21 @@ export default class View {
 
         if (src) {
             imagePreview.alt = `Preview of selected image: ${alt}`;
+            imagePreview.setAttribute('data-populated', '');
+        } else if (imagePreview.hasAttribute('data-populated')) {
+            imagePreview.removeAttribute('data-populated');
         }
 
         imagePreview.src = src;
+    }
+
+    toggleImageAddButton() {
+        const addButton = this.form.querySelector('#add-img');
+        if (addButton.textContent === 'Change') {
+            addButton.textContent = 'Add photo';
+        } else {
+            addButton.textContent = 'Change';
+        }
     }
 
     toggleImageRemoveButton() {
