@@ -1,5 +1,6 @@
 export default class View {
     constructor() {
+        this._listeners = [];
         this.app = this.getElement('main');
         this.recipeCardContainer = this.createElement('div', {
             id: 'recipe-card-list',
@@ -453,7 +454,7 @@ export default class View {
         optionsMenu.classList.remove('show');
     }
 
-    #getIdByChildElement(child) {
+    getIdByChildElement(child) {
         const recipeCard = child?.closest('[data-id]');
         const id = recipeCard?.dataset.id;
         return id;
@@ -461,6 +462,10 @@ export default class View {
 
     getRecipeCardById(id) {
         return this.recipeCardContainer.querySelector(`[data-id="${id}"]`);
+    }
+
+    getOpenOptionsMenu() {
+        return document.querySelector('.options.show') || null;
     }
 
     #getImageSrc(image) {
@@ -477,250 +482,161 @@ export default class View {
         return null;
     }
 
-    /* ---- EVENT LISTENER LOGIC ---- */
-    #getOpenRecipeListener(handler) {
-        return (event) => {
-            if (
-                event.target.closest('.recipe-card .img-container') ||
-                event.target.matches('.read-more')
-            ) {
-                const id = this.#getIdByChildElement(event.target);
-                handler(id);
-            }
-        };
-    }
+    /* ---- CONDITIONS FOR EVENT DELEGATION ---- */
 
-    #getOpenEditFormListener(handler) {
-        return (event) => {
-            if (event.target.matches('.edit-recipe')) {
-                const id = this.#getIdByChildElement(event.target);
-                handler(id);
-            }
-        };
-    }
+    shouldCloseModal = (event) =>
+        !event.target.closest('.modal-inner') ||
+        event.target.matches('.cancel');
 
-    #getPreviewImageListener(handler) {
-        return (event) => {
-            const image = event.currentTarget.files[0];
-            const alt = event.currentTarget.name.value;
-            const id = this.#getIdByChildElement(event.currentTarget);
-            handler(image, alt, id);
-        };
-    }
+    shouldOpenRecipe = (event) =>
+        event.target.closest('.recipe-card .img-container') ||
+        event.target.matches('.read-more');
 
-    #getResetImageListener(handler) {
-        return (event) => {
-            if (event.target.matches('#remove-img')) {
-                const id = event.currentTarget?.id || null;
-                handler(id);
-            }
-        };
-    }
+    shouldOpenAddForm = (event) => event.target.matches('#add-recipe');
 
-    #getAddInputListener(handler) {
-        return (event) => {
-            if (
-                event.target.matches('input') &&
-                event.target.parentElement.matches('.input-wrapper:last-child')
-            ) {
-                const fieldset = event.target.closest('fieldset');
-                handler(fieldset);
-            }
-        };
-    }
+    shouldOpenEditForm = (event) => event.target.matches('.edit-recipe');
 
-    #getRemoveInputListener(handler) {
-        return (event) => {
-            if (event.target.matches('.remove-input')) {
-                event.stopPropagation();
-                const parent = event.target.parentElement;
-                parent.remove();
-                // handler(parent);
-            }
-        };
-    }
+    shouldOpenOptionsMenu = (event) => event.target.matches('.see-options');
 
-    #getSubmitListener(handler) {
-        return (event) => {
-            event.preventDefault();
-            handler();
-        };
-    }
-
-    #getDeleteListener(handler) {
-        return (event) => {
-            if (event.target.matches('.delete-recipe')) {
-                const id = this.#getIdByChildElement(event.target);
-                handler(id);
-            }
-        };
-    }
-
-    #getCloseModalListener(handler) {
-        return (event) => {
-            if (
-                !event.target.closest('.modal-inner') ||
-                event.target.matches('.cancel')
-            ) {
-                event.stopPropagation();
-                handler();
-            }
-        };
-    }
-
-    #getOpenOptionsMenuListener(handler) {
-        return (event) => {
-            if (event.target.matches('.see-options')) {
-                const id = this.#getIdByChildElement(event.target);
-                handler(id);
-            }
-        };
-    }
-
-    #getCloseOptionsMenuListener(handler) {
-        return (event) => {
-            const openMenu = document.querySelector('.options.show');
-
-            if (!openMenu) return;
-
-            const isInsideMenu =
-                event.target.closest('.options-dropdown') ===
-                openMenu.closest('.options-dropdown');
-
-            if (isInsideMenu) return;
-
-            const id = this.#getIdByChildElement(openMenu);
-            handler(id);
-        };
-    }
-
-    /* ---- METHODS TO BIND/UNBIND EVENT HANDLERS TO/FROM VIEW + LISTENERS ---- */
-    bindOpenRecipe(handler) {
-        this.recipeCardContainer.addEventListener(
-            'click',
-            this.#getOpenRecipeListener(handler)
+    shouldCloseOptionsMenu = (event) => {
+        return (
+            this.getOpenOptionsMenu() &&
+            event.target?.closest('.options-dropdown') !==
+                document
+                    .querySelector('.options.show')
+                    ?.closest('.options-dropdown')
         );
+    };
+
+    shouldResetImage = (event) => event.target.matches('#remove-img');
+
+    shouldAddInput = (event) =>
+        event.target.closest('.input-wrapper:last-child');
+
+    shouldRemoveInput = (event) => event.target.matches('.remove-input');
+
+    shouldDelete = (event) => event.target.matches('.delete-recipe');
+
+    /* ---- METHODS TO BIND/UNBIND EVENT LISTENERS ---- */
+
+    bindListener({ event, handler, root = document, condition = () => true }) {
+        const listener = (e) => {
+            condition(e) && handler(e);
+        };
+        root.addEventListener(event, listener);
+        this._listeners.push({
+            event: event,
+            listener,
+            condition,
+            handler,
+            root,
+        });
     }
+
+    unbindAllListeners() {
+        this._listeners.forEach(({ event, listener, root }) => {
+            root.removeEventListener(event, listener);
+        });
+        this._listeners = [];
+    }
+
+    bindOpenRecipe(handler) {
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldOpenRecipe,
+        });
+    }
+
     bindOpenAddForm(handler) {
-        this.addRecipeButton.addEventListener('click', handler);
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldOpenAddForm,
+        });
     }
     bindOpenEditForm(handler) {
-        document.addEventListener(
-            'click',
-            this.#getOpenEditFormListener(handler)
-        );
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldOpenEditForm,
+        });
     }
     bindPreviewImage(handler) {
-        if (this.form) {
-            const imageInput = this.form.querySelector('#img-input');
-            imageInput.addEventListener(
-                'change',
-                this.#getPreviewImageListener(handler)
-            );
-        }
+        this.form &&
+            this.bindListener({
+                event: 'change',
+                handler,
+                root: this.form.querySelector('#img-input'),
+            });
     }
-    unbindPreviewImage(handler) {
-        if (this.form) {
-            const imageInput = this.form.querySelector('#img-input');
-            imageInput.removeEventListener(
-                'change',
-                this.#getPreviewImageListener(handler)
-            );
-        }
-    }
+
     bindResetImage(handler) {
-        if (this.form) {
-            this.form.addEventListener(
-                'click',
-                this.#getResetImageListener(handler)
-            );
-        }
+        this.form &&
+            this.bindListener({
+                event: 'click',
+                handler,
+                condition: this.shouldResetImage,
+                root: this.form,
+            });
     }
-    unbindResetImage(handler) {
-        if (this.form) {
-            this.form.removeEventListener(
-                'click',
-                this.#getResetImageListener(handler)
-            );
-        }
-    }
+
     bindAddInput(handler) {
-        if (this.form) {
-            this.form.addEventListener(
-                'keypress',
-                this.#getAddInputListener(handler)
-            );
-        }
+        this.form &&
+            this.bindListener({
+                event: 'keypress',
+                handler,
+                root: this.form,
+                condition: this.shouldAddInput,
+            });
     }
-    unbindAddInput(handler) {
-        if (this.form) {
-            this.form.removeEventListener(
-                'keypress',
-                this.#getAddInputListener(handler)
-            );
-        }
-    }
+
     bindRemoveInput(handler) {
-        if (this.form) {
-            this.form.addEventListener(
-                'click',
-                this.#getRemoveInputListener(handler)
-            );
-        }
+        this.form &&
+            this.bindListener({
+                event: 'click',
+                handler,
+                root: this.form,
+                condition: this.shouldRemoveInput,
+            });
     }
-    unbindRemoveInput(handler) {
-        if (this.form) {
-            this.form.removeEventListener(
-                'click',
-                this.#getRemoveInputListener(handler)
-            );
-        }
-    }
+
     bindDelete(handler) {
-        document.addEventListener('click', this.#getDeleteListener(handler));
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldDelete,
+        });
     }
+
     bindSubmit(handler) {
-        if (this.form) {
-            this.form.addEventListener(
-                'submit',
-                this.#getSubmitListener(handler)
-            );
-        }
+        this.form &&
+            this.bindListener({ event: 'submit', handler, root: this.form });
     }
-    unbindSubmit(handler) {
-        if (this.form) {
-            this.form.removeEventListener(
-                'submit',
-                this.#getSubmitListener(handler)
-            );
-        }
-    }
+
     bindCloseModal(handler) {
-        if (this.modal) {
-            this.modal.addEventListener(
-                'click',
-                this.#getCloseModalListener(handler)
-            );
-        }
+        this.modal &&
+            this.bindListener({
+                event: 'click',
+                handler,
+                root: this.modal,
+                condition: this.shouldCloseModal,
+            });
     }
-    unbindCloseModal(handler) {
-        if (this.modal) {
-            this.modal.removeEventListener(
-                'click',
-                this.#getCloseModalListener(handler)
-            );
-        }
-    }
+
     bindOpenOptionsMenu(handler) {
-        document.addEventListener(
-            'click',
-            this.#getOpenOptionsMenuListener(handler)
-        );
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldOpenOptionsMenu,
+        });
     }
+
     bindCloseOptionsMenu(handler) {
-        document.addEventListener(
-            'click',
-            this.#getCloseOptionsMenuListener(handler)
-        );
+        this.bindListener({
+            event: 'click',
+            handler,
+            condition: this.shouldCloseOptionsMenu,
+        });
     }
 }
