@@ -258,7 +258,7 @@ export default class View {
                                 imgSrc ? 'Change' : 'Add photo'
                             }</label>
                             <button type="button" role="button" id="remove-img" class="button-deemphasize" ${
-                                imgSrc ? '' : 'disabled'
+                                imgSrc ? '' : 'disabled="true"'
                             }>Remove</button>
                         </div>
                     </div>
@@ -426,10 +426,15 @@ export default class View {
         imagePreview.src = src;
     }
 
+    toggleImageRemoveButton() {
+        const removeButton = this.form.querySelector('#remove-img');
+        removeButton.disabled = !removeButton.disabled;
+    }
+
     resetForm() {
         this.form.reset();
-        [...this.form.querySelectorAll('fieldset input')].forEach((input) =>
-            input.remove()
+        [...this.form.querySelectorAll('fieldset .input-wrapper')].forEach(
+            (input) => input.remove()
         );
         this.form.dataset.state = 'reset';
     }

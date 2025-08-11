@@ -61,12 +61,14 @@ export default class Controller {
     handlePreviewImage = (image, alt, recipeId) => {
         const recipeName = this.model.cache.get(recipeId)?.name;
         this.view.setImagePreview(image, alt || recipeName);
+        this.view.toggleImageRemoveButton();
     };
 
     handleResetImage = (recipeId) => {
         const updatedRecipe = { ...this.createRecipeFromForm(), photo: null };
         this.view.resetForm();
         this.view.setImagePreview();
+        this.view.toggleImageRemoveButton();
         this.view.populateForm(this.view.formMode, updatedRecipe);
     };
 
