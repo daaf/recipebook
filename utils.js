@@ -34,26 +34,23 @@ function sanitizeObject(object) {
     return mapObject(object, sanitizeText);
 }
 
-function sanitizeText(text) {
-    if (typeof text === 'string') {
-        return DOMPurify.sanitize(text);
+function sanitizeText(input) {
+    if (typeof input === 'string') {
+        return DOMPurify.sanitize(input)
+            .replace(/<.*?>/g, '') // Remove anything between < and >
+            .replace(/[=]/g, ''); // Remove some non-alphanumeric characters
     } else {
-        return text;
+        return input;
     }
 }
 
-function escapeQuotesInObject(object) {
-    return mapObject(object, escapeQuotesInText);
-}
-
-function escapeQuotesInText(text) {
-    if (typeof text === 'string') {
-        const singleQuotes = [/'/g, '&apos;'];
-        const doubleQuotes = [/"/g, '&quot;'];
-        return text.replace(...singleQuotes).replace(...doubleQuotes);
-    } else {
-        return text;
-    }
+function escapeAttribute(value) {
+    if (typeof value !== 'string') return value;
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 function getImageSrc(image) {
@@ -71,6 +68,6 @@ export {
     createElement,
     sanitizeObject,
     sanitizeText,
-    escapeQuotesInObject,
+    escapeAttribute,
     getImageSrc,
 };

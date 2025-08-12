@@ -2,7 +2,7 @@ import {
     createElement,
     sanitizeText,
     sanitizeObject,
-    escapeQuotesInObject,
+    escapeAttribute,
     getImageSrc,
 } from './utils.js';
 
@@ -29,18 +29,16 @@ export default class FormView {
     }
 
     create(recipeData) {
-        const recipe = recipeData
-            ? sanitizeObject(escapeQuotesInObject(recipeData))
-            : null;
+        const sanitizedData = recipeData ? sanitizeObject(recipeData) : null;
         const attributes = {
             id: 'add-update-recipe',
             'aria-label': 'Create or update recipe',
         };
 
-        if (recipe) attributes['data-id'] = recipe.id;
+        if (sanitizedData) attributes['data-id'] = sanitizedData.id;
 
         const form = createElement('form', attributes);
-        const imgSrc = getImageSrc(recipe?.photo) || '';
+        const imgSrc = getImageSrc(sanitizedData?.photo) || '';
 
         form.innerHTML = `
             <label for="name" class="visually-hidden">Recipe name</label>
@@ -50,7 +48,7 @@ export default class FormView {
                 name="name"
                 aria-label="Recipe name"
                 placeholder="My awesome recipe"
-                value="${recipe?.name || ''}"
+                value="${escapeAttribute(sanitizedData?.name || '')}"
                 required
                 />
                 <div class="two-column main-left">
@@ -60,7 +58,7 @@ export default class FormView {
                         id="description"
                         name="description"
                         aria-label="Recipe description"
-                        >${recipe?.description || ''}</textarea>
+                        >${sanitizedData?.description || ''}</textarea>
                     </div>
                     <div class="img-upload">
                         <h3>Photo</h3>
@@ -69,7 +67,9 @@ export default class FormView {
                             id="img-preview"
                             ${
                                 imgSrc
-                                    ? `alt="Preview of selected image: ${recipe.name}" data-populated`
+                                    ? `alt="Preview of selected image: ${escapeAttribute(
+                                          sanitizedData.name
+                                      )}" data-populated`
                                     : ''
                             }
                             height="180"
