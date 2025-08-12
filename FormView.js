@@ -1,4 +1,10 @@
-import { createElement, getImageSrc } from './utils.js';
+import {
+    createElement,
+    sanitizeText,
+    sanitizeObject,
+    escapeQuotesInObject,
+    getImageSrc,
+} from './utils.js';
 
 export default class FormView {
     constructor(recipe) {
@@ -22,7 +28,10 @@ export default class FormView {
         return this.element ? new FormData(this.element) : null;
     }
 
-    create(recipe) {
+    create(recipeData) {
+        const recipe = recipeData
+            ? sanitizeObject(escapeQuotesInObject(recipeData))
+            : null;
         const attributes = {
             id: 'add-update-recipe',
             'aria-label': 'Create or update recipe',
@@ -164,7 +173,7 @@ export default class FormView {
         const inputs = this.element.querySelectorAll(`#${fieldsetId} input`);
         return [...inputs]
             .filter((input) => input.value)
-            .map((input) => input.value);
+            .map((input) => sanitizeText(input.value));
     }
 
     getInputsInFieldset(fieldsetId) {

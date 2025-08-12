@@ -1,3 +1,5 @@
+import { sanitizeObject } from './utils.js';
+
 export default class Controller {
     constructor(model, view) {
         this.model = model;
@@ -160,7 +162,7 @@ export default class Controller {
             photo = null;
         }
 
-        return {
+        const recipe = {
             id: recipeId,
             name: formData.get('name'),
             description: formData.get('description') || null,
@@ -168,6 +170,8 @@ export default class Controller {
             instructions: this.view.form.getFieldsetValues('instructions'),
             photo,
         };
+
+        return sanitizeObject(recipe);
     }
 
     getRecipeFromEvent(event) {
