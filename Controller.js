@@ -6,52 +6,61 @@ export default class Controller {
 
         this.bindDefaultHandlers();
 
-        this.view.displayRecipeCards(this.recipes);
+        this.view.loadRecipeViews(this.recipes);
     }
 
     /* ---- MODAL EVENT HANDLERS ---- */
     handleCloseModal = () => {
-        this.view.closeModal();
+        this.view.modal.close();
         this.view.unbindAllListeners();
+        if (this.view.form) this.view.removeFormView();
+        this.view.removeModalView();
         this.bindDefaultHandlers();
     };
 
     handleOpenRecipe = (event) => {
         const recipe = this.getRecipeFromEvent(event);
-        this.view.closeOptionsMenu(recipe.id);
-        this.view.createModal();
-        this.view.openRecipe(recipe);
-        this.view.openModal();
+        const recipeView = this.view.createRecipeView(recipe);
+        this.view.createModalView(recipeView.fullRecipe);
+        this.view.appendToRoot(this.view.modal.element);
+        this.view.modal.open();
         this.bindRecipeHandlers();
     };
 
     /* ---- FORM EVENT HANDLERS ---- */
     handleOpenAddForm = () => {
-        this.view.createModal();
-        this.view.createForm();
-        this.view.populateForm();
-        this.view.openModal();
+        this.view.createFormView();
+        this.view.form.populate();
+        this.view.createModalView(this.view.form.element);
+        this.view.appendToRoot(this.view.modal.element);
+        this.view.modal.open();
         this.bindFormHandlers();
     };
 
     handleOpenEditForm = (event) => {
         const recipe = this.getRecipeFromEvent(event);
-        this.view.closeModal();
-        this.view.closeOptionsMenu(recipe.id);
-        this.view.createModal();
-        this.view.createForm(recipe);
-        this.view.populateForm('edit', recipe);
-        this.view.openModal();
+
+        if (this.view.modal) {
+            this.view.modal.close();
+            this.view.removeModalView();
+        }
+        this.view.createFormView(recipe);
+        this.view.form.populate('edit', recipe);
+        this.view.createModalView(this.view.form.element);
+        this.view.appendToRoot(this.view.modal.element);
+        this.view.modal.open();
         this.bindFormHandlers();
     };
 
     handleAddInput = (event) => {
-        this.view.addTextInputsToFieldset(event.target.closest('fieldset'));
+        this.view.form.addTextInputsToFieldset(
+            event.target.closest('fieldset')
+        );
     };
 
     handleRemoveInput = (event) => {
         event.stopPropagation();
-        event.target.parentElement.remove();
+        this.view.form.removeTextInput(event.target);
     };
 
     handlePreviewImage = (event) => {
@@ -59,55 +68,58 @@ export default class Controller {
         const alt = event.currentTarget.name.value;
         const recipe = this.getRecipeFromEvent(event);
 
-        if (!this.view.getImagePreview().hasAttribute('data-populated')) {
-            this.view.toggleImageAddButton();
-            this.view.toggleImageRemoveButton();
+        if (!this.view.form.getImagePreview().hasAttribute('data-populated')) {
+            this.view.form.toggleImageAddButton();
+            this.view.form.toggleImageRemoveButton();
         }
-        this.view.setImagePreview(image, alt || recipe.name);
+        this.view.form.setImagePreview(image, alt || recipe?.name);
     };
 
     handleResetImage = () => {
-        const updatedRecipe = { ...this.createRecipeFromForm(), photo: null };
-        this.view.resetForm();
-        this.view.toggleImageRemoveButton();
-        this.view.toggleImageAddButton();
-        this.view.setImagePreview();
-        this.view.populateForm(this.view.formMode, updatedRecipe);
+        const formValues = { ...this.createRecipeFromForm(), photo: null };
+        this.view.form.reset();
+        this.view.form.toggleImageRemoveButton();
+        this.view.form.toggleImageAddButton();
+        this.view.form.setImagePreview();
+        this.view.form.populate(this.view.form.mode, formValues);
     };
 
     handleSubmit = (event) => {
         event.preventDefault();
-        const formValues = this.view.formValues;
+        const formValues = this.view.form.values;
         const recipe = this.createRecipeFromForm(formValues);
-        const mode = this.view.formMode;
+        const mode = this.view.form.mode;
 
         if (mode === 'add') {
+            const recipeView = this.view.createRecipeView(recipe);
             this.model.addRecipe(recipe);
-            this.view.addRecipeCard(recipe);
+            this.view.addRecipeView(recipeView);
         } else if (mode === 'edit') {
             this.model.updateRecipe(recipe);
-            this.view.updateRecipeCard(recipe);
+            this.view.updateRecipeView(recipe);
         }
-        this.view.closeModal();
+        this.handleCloseModal();
     };
 
     /* ---- OPTIONS MENU EVENT HANDLERS ---- */
     handleDelete = (event) => {
         const recipe = this.getRecipeFromEvent(event);
-        this.view.closeModal();
+        if (this.view.modal) this.handleCloseModal();
         this.model.deleteRecipe(recipe.id);
-        this.view.deleteRecipeCard(recipe.id);
+        this.view.deleteRecipeView(recipe.id);
     };
 
     handleOpenOptionsMenu = (event) => {
-        const recipe = this.getRecipeFromEvent(event);
-        this.view.openOptionsMenu(recipe.id);
+        const recipeId = this.view.getParentId(event.target);
+        const recipeView = this.view.getRecipeView(recipeId);
+        recipeView.openOptionsMenu();
     };
 
     handleCloseOptionsMenu = () => {
         const openMenu = this.view.getOpenOptionsMenu();
-        const recipeId = this.view.getIdByChildElement(openMenu);
-        this.view.closeOptionsMenu(recipeId);
+        const recipeId = this.view.getParentId(openMenu);
+        const recipeView = this.view.getRecipeView(recipeId);
+        recipeView.closeOptionsMenu();
     };
 
     /* ---- HELPER FUNCTIONS ---- */
@@ -134,15 +146,15 @@ export default class Controller {
     };
 
     createRecipeFromForm() {
-        const recipeId = this.view.formId || crypto.randomUUID();
+        const recipeId = this.view.form.id || crypto.randomUUID();
         const existingRecipe = this.model.cache.get(recipeId) || null;
-        const formData = this.view.formValues;
+        const formData = this.view.form.values;
         const uploadedImage = formData.get('img-input') ?? null;
         let photo;
 
-        if (uploadedImage.size) {
+        if (uploadedImage?.size) {
             photo = uploadedImage;
-        } else if (this.view.formState !== 'reset' && existingRecipe?.photo) {
+        } else if (this.view.form.state !== 'reset' && existingRecipe?.photo) {
             photo = existingRecipe?.photo;
         } else {
             photo = null;
@@ -152,14 +164,14 @@ export default class Controller {
             id: recipeId,
             name: formData.get('name'),
             description: formData.get('description') || null,
-            ingredients: this.view.getFieldsetValues('ingredients'),
-            instructions: this.view.getFieldsetValues('instructions'),
+            ingredients: this.view.form.getFieldsetValues('ingredients'),
+            instructions: this.view.form.getFieldsetValues('instructions'),
             photo,
         };
     }
 
     getRecipeFromEvent(event) {
-        const recipeId = this.view.getIdByChildElement(event.target);
+        const recipeId = this.view.getParentId(event.target);
         const recipe = this.model.cache.get(recipeId);
         return recipe;
     }

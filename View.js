@@ -1,491 +1,118 @@
+import ModalView from './ModalView.js';
+import FormView from './FormView.js';
+import RecipeView from './RecipeView.js';
+import { createElement } from './utils.js';
+
 export default class View {
     constructor() {
+        this.modal = null;
+        this.form = null;
+        this.recipeViews = [];
         this._listeners = [];
-        this.app = this.getElement('main');
-        this.recipeCardContainer = this.createElement('div', {
+        this.app = document.querySelector('main');
+        this.recipeCardContainer = createElement('div', {
             id: 'recipe-card-list',
         });
-        this.addRecipeButton = document.querySelector('#add-recipe');
-        this._modal = null;
-        this._form = null;
-        this.defaultImgSrc = './assets/icons/fast-food-100.png';
 
-        this.app.append(this.recipeCardContainer);
+        this.appendToRoot(this.recipeCardContainer);
     }
 
-    get modal() {
-        return this._modal;
+    appendToRoot(element) {
+        this.app.append(element);
     }
 
-    set modal(value) {
-        this._modal = value;
+    createModalView(contents) {
+        this.modal = new ModalView(contents);
     }
 
-    get modalInner() {
-        return this.modal.querySelector('.modal-inner');
+    removeModalView() {
+        this.modal.remove();
+        this.modal = null;
     }
 
-    get form() {
-        return this._form;
+    createFormView(recipe) {
+        this.form = new FormView(recipe);
     }
 
-    set form(value) {
-        this._form = value;
+    removeFormView() {
+        this.form.remove();
+        this.form = null;
     }
 
-    get formState() {
-        return this?.form?.dataset?.state;
-    }
+    createRecipeView(recipe) {
+        let recipeView;
 
-    get formMode() {
-        return this?.form?.dataset?.mode || null;
-    }
+        const existingRecipeView = this.recipeViews.find(
+            (recipeView) => recipeView.recipe.id === recipe.id
+        );
 
-    get formId() {
-        return this?.form?.dataset?.id || null;
-    }
-
-    get formValues() {
-        return this.form ? new FormData(this.form) : null;
-    }
-
-    getElement(selector) {
-        const element = document.querySelector(selector);
-
-        return element;
-    }
-
-    createElement(tag, attributes) {
-        const element = document.createElement(tag);
-
-        if (attributes) {
-            Object.entries(attributes).forEach(([attribute, value]) => {
-                try {
-                    element.setAttribute(attribute, value);
-                } catch (error) {
-                    console.log(
-                        `Error setting attribute ${attribute} with value ${value}`
-                    );
-                }
-            });
+        if (existingRecipeView) {
+            recipeView = existingRecipeView;
+        } else {
+            recipeView = new RecipeView(recipe);
+            this.recipeViews.push(recipeView);
         }
 
-        return element;
+        return recipeView;
     }
 
-    #createRecipeCard(recipe) {
-        const div = this.createElement('div', {
-            class: 'recipe-card',
-            'data-id': recipe.id,
-        });
-
-        const imgSrc = this.#getImageSrc(recipe.photo) || this.defaultImgSrc;
-
-        div.innerHTML = `
-            <div class="img-container" >
-                <img src="${imgSrc}" class="${
-            recipe.photo ? '' : 'placeholder'
-        }" alt="${recipe.name}" />
-            </div>
-            <div class="recipe-card-body">
-                <div class="recipe-card-header">
-                    <h2 class="recipe-name">${recipe.name}</h2>
-                    <div class="options-dropdown">
-                        <input type="image" src="./assets/icons/3-dots_black.png" class="see-options" aria-label="See more options" name="options" />
-                        <div class="options">
-                            <a class="edit-recipe">Edit</a>
-                            <a class="delete-recipe">Delete</a>
-                        </div>
-                    </div>
-                </div>
-                <ul class="recipe-ingredients">${recipe.ingredients
-                    .map((ingredient) => `<li>${ingredient}</li>`)
-                    .join('')}
-                </ul>
-                </div>
-                <a href="#" class="read-more">Read more &rarr;</a>`;
-
-        return div;
-    }
-
-    addRecipeCard(recipe) {
-        const card = this.#createRecipeCard(recipe);
+    addRecipeView(recipeView) {
+        this.recipeViews.push(recipeView);
+        const card = recipeView.card;
         this.recipeCardContainer.append(card);
     }
 
-    updateRecipeCard(recipe) {
-        const card = this.getRecipeCardById(recipe.id);
-        const image = card.querySelector('img');
-        const cardHeader = card.querySelector('h2');
-        const ingredientsUL = card.querySelector('ul');
-
-        if (recipe.photo) {
-            image.src = this.#getImageSrc(recipe.photo);
-            image.classList?.remove('placeholder');
-        } else {
-            image.src = this.defaultImgSrc;
-            image.classList.add('placeholder');
-        }
-
-        cardHeader.textContent = recipe.name;
-        ingredientsUL.innerHTML = '';
-
-        recipe.ingredients.forEach((ingredient) => {
-            const li = document.createElement('li');
-            li.textContent = ingredient;
-            ingredientsUL.appendChild(li);
-        });
+    getRecipeView(recipeId) {
+        return this.recipeViews.find((rv) => rv.recipe.id === recipeId);
     }
 
-    deleteRecipeCard(recipeId) {
-        const card = this.getRecipeCardById(recipeId);
+    updateRecipeView(recipe) {
+        let recipeView = this.getRecipeView(recipe.id);
+
+        const newRecipeView = new RecipeView(recipe);
+        newRecipeView.updateCard(recipeView.card);
+
+        recipeView = newRecipeView;
+    }
+
+    deleteRecipeView(recipeId) {
+        const card = this.getRecipeView(recipeId).card;
         const imgSrc = card.querySelector('img')?.src;
+
         URL.revokeObjectURL(imgSrc);
+
+        this.recipeViews = this.recipeViews.filter(
+            (rv) => rv.recipe.id !== recipeId
+        );
         card.remove();
     }
 
-    displayRecipeCards(recipes) {
+    loadRecipeViews(recipes) {
         if (this.recipeCardContainer.firstChild) {
             this.recipeCardContainer.innerHTML = '';
         }
 
         if (!recipes.length) {
-            const p = this.createElement('p');
+            const p = createElement('p');
             p.textContent = 'Click the + button to create your first recipe';
         } else {
-            const recipeCards = recipes.map((recipe) =>
-                this.#createRecipeCard(recipe)
-            );
-            this.recipeCardContainer.append(...recipeCards);
+            const cards = recipes
+                .map((recipe) => this.createRecipeView(recipe))
+                .map((view) => view.card);
+            this.recipeCardContainer.append(...cards);
         }
     }
 
-    #createFullRecipe(recipe) {
-        const div = this.createElement('div', {
-            class: 'recipe',
-            'data-id': recipe.id,
-        });
+    /* ---- HELPER FUNCTIONS FOR GETTING STATE OF DOM ---- */
 
-        const imgSrc = this.#getImageSrc(recipe.photo) || this.defaultImgSrc;
-
-        div.innerHTML = `
-        <h2>${recipe.name}</h2>
-        <img src="${imgSrc}" class="${
-            recipe.photo ? '' : 'placeholder'
-        }" alt="${recipe.name}" />
-        ${recipe.description ? `<p>${recipe.description}</p>` : ''}
-        <section>
-                <h3>Ingredients</h3>
-                <ul class="recipe-ingredients">${recipe.ingredients
-                    .map((ingredient) => `<li>${ingredient}</li>`)
-                    .join('')}</ul>
-        </section>
-        <section>
-        <h3>Instructions</h3>
-                <ol class="recipe-instructions">${recipe.instructions
-                    .map((step) => `<li>${step}</li>`)
-                    .join('')}</ol>
-        </section>
-                <div class="modal-actions">
-                    <button class="delete-recipe button-danger">Delete</button>
-                    <button class="edit-recipe button-primary">Edit</button>
-                </div>
-                `;
-
-        return div;
-    }
-
-    #createModal() {
-        const outer = this.createElement('div', { class: 'modal-outer' });
-        outer.innerHTML = `
-            <div class="modal-inner">
-            </div>`;
-
-        return outer;
-    }
-
-    #createForm(recipe) {
-        const attributes = {
-            id: 'add-update-recipe',
-            'aria-label': 'Create or update recipe',
-        };
-
-        if (recipe) attributes['data-id'] = recipe.id;
-
-        const form = this.createElement('form', attributes);
-        const imgSrc = this.#getImageSrc(recipe?.photo) || '';
-
-        form.innerHTML = `
-            <label for="name" class="visually-hidden">Recipe name</label>
-            <input
-                type="text"
-                id="name"
-                name="name"
-                aria-label="Recipe name"
-                placeholder="My awesome recipe"
-                value="${recipe?.name || ''}"
-                required
-                />
-                <div class="two-column main-left">
-                    <div class="description-container">
-                        <label for="description">Description</label>
-                        <textarea
-                        id="description"
-                        name="description"
-                        aria-label="Recipe description"
-                        >${recipe?.description || ''}</textarea>
-                    </div>
-                    <div class="img-upload">
-                        <h3>Photo</h3>
-                        <img
-                            src="${imgSrc}"
-                            id="img-preview"
-                            ${
-                                imgSrc
-                                    ? `alt="Preview of selected image: ${recipe.name}" data-populated`
-                                    : ''
-                            }
-                            height="180"
-                        />
-                        <div id="img-upload-actions">
-                            <input
-                            type="file"
-                            id="img-input"
-                            class="visually-hidden"
-                            name="img-input"
-                            aria-label="Upload an image file"
-                            accept="image/jpeg, image/png, image/jpg"
-                            /><label for="img-input" id="add-img" class="label-button button-primary">${
-                                imgSrc ? 'Change' : 'Add photo'
-                            }</label>
-                            <button type="button" role="button" id="remove-img" class="button-deemphasize" ${
-                                imgSrc ? '' : 'disabled="true"'
-                            }>Remove</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="two-column main-right">
-                    <fieldset
-                        id="ingredients"
-                        data-child-class-list="ingredient"
-                    >
-                        <legend>Ingredients</legend>
-                    </fieldset>
-                    <fieldset
-                        id="instructions"
-                        data-child-class-list="step"
-                    >
-                        <legend>Instructions</legend>
-                    </fieldset>
-                </div>
-            <div class="modal-actions">
-                <button
-                    type="button"
-                    name="cancel"
-                    class="cancel button-deemphasize"
-                    aria-label="Discard changes"
-                    >
-                    Cancel
-                    </button>
-                    <button
-                    type="submit"
-                    name="submit"
-                    class="submit button-primary"
-                    aria-label="Save recipe"
-                >
-                    Save
-                </button>
-            </div>
-        `;
-
-        return form;
-    }
-
-    createModal() {
-        this.modal = this.#createModal();
-    }
-
-    openModal() {
-        if (this.modal) {
-            this.app.append(this.modal);
-            this.modal.classList.add('open');
-        }
-    }
-
-    closeModal() {
-        if (this.modal) {
-            const imgSrc = this.modal.querySelector('img')?.src;
-            URL.revokeObjectURL(imgSrc);
-            this.modal.classList.remove('open');
-            this.modal.remove();
-            this.modal = null;
-        }
-    }
-
-    setModalTitle(title) {
-        if (this.modal) {
-            this.modal.querySelector('.modal-title').textContent = title;
-        }
-    }
-
-    setModalContent(element) {
-        this.modal.querySelector('.modal-inner').append(element);
-    }
-
-    openRecipe(recipe) {
-        if (this.modal) {
-            const recipeElement = this.#createFullRecipe(recipe);
-            this.setModalContent(recipeElement);
-        }
-    }
-
-    createForm(recipe) {
-        this.form = this.#createForm(recipe);
-    }
-
-    populateForm(mode = 'add', recipe = null) {
-        if (this.form) {
-            this.form.setAttribute('data-mode', mode);
-            //TODO: Refactor to remove this modal operation from this method
-            this.setModalContent(this.form);
-            this.form.querySelectorAll('fieldset').forEach((fieldset) => {
-                const values = recipe?.[fieldset.id];
-                this.addTextInputsToFieldset(fieldset, values);
-            });
-        }
-    }
-
-    addTextInputsToFieldset(fieldset, values = []) {
-        if (this.form) {
-            const extraInput = [''];
-            [...values, ...extraInput].forEach((value, index) => {
-                const div = this.createElement('div', {
-                    class: 'input-wrapper',
-                });
-                const button = this.createElement('button', {
-                    type: 'button',
-                    role: 'button',
-                    class: 'remove-input',
-                    'aria-label': `Remove input ${index}`,
-                });
-                button.textContent = '×';
-                const input = this.createElement('input', {
-                    type: 'text',
-                    name: index,
-                    maxLength: 48,
-                    value,
-                });
-                const label = this.createElement('label', {
-                    for: `${index}`,
-                    class: 'visually-hidden',
-                });
-                div.append(label, input, button);
-                fieldset.append(div);
-            });
-        } else {
-            console.log('No form present in DOM');
-        }
-    }
-
-    getFieldsetValues(fieldsetId) {
-        const inputs = this.form.querySelectorAll(`#${fieldsetId} input`);
-        return [...inputs]
-            .filter((input) => input.value)
-            .map((input) => input.value);
-    }
-
-    getInputsInFieldset(fieldsetId) {
-        this.form.querySelectorAll(`#${fieldsetId} input`);
-    }
-
-    getImagePreview() {
-        if (this.form) {
-            return this.form.querySelector('#img-preview');
-        }
-    }
-
-    setImagePreview(img, alt) {
-        const imagePreview = this.form.querySelector('#img-preview');
-        let src = '';
-
-        if (img) {
-            src = this.#getImageSrc(img);
-        } else if (!alt) {
-            imagePreview.removeAttribute('alt');
-        }
-
-        if (src) {
-            imagePreview.alt = `Preview of selected image: ${alt}`;
-            imagePreview.setAttribute('data-populated', '');
-        } else if (imagePreview.hasAttribute('data-populated')) {
-            imagePreview.removeAttribute('data-populated');
-        }
-
-        imagePreview.src = src;
-    }
-
-    toggleImageAddButton() {
-        const addButton = this.form.querySelector('#add-img');
-        if (addButton.textContent === 'Change') {
-            addButton.textContent = 'Add photo';
-        } else {
-            addButton.textContent = 'Change';
-        }
-    }
-
-    toggleImageRemoveButton() {
-        const removeButton = this.form.querySelector('#remove-img');
-        removeButton.disabled = !removeButton.disabled;
-    }
-
-    resetForm() {
-        this.form.reset();
-        [...this.form.querySelectorAll('fieldset .input-wrapper')].forEach(
-            (input) => input.remove()
-        );
-        this.form.dataset.state = 'reset';
-    }
-
-    openOptionsMenu(recipeId) {
-        const optionsMenu = this.recipeCardContainer
-            .querySelector(`[data-id="${recipeId}"]`)
-            .querySelector('.options');
-        optionsMenu.classList.add('show');
-    }
-
-    closeOptionsMenu(recipeId) {
-        const optionsMenu = this.recipeCardContainer
-            .querySelector(`[data-id="${recipeId}"]`)
-            .querySelector('.options');
-        optionsMenu.classList.remove('show');
-    }
-
-    getIdByChildElement(child) {
-        const recipeCard = child?.closest('[data-id]');
-        const id = recipeCard?.dataset.id;
+    getParentId(child) {
+        const parentWithId = child?.closest('[data-id]');
+        const id = parentWithId?.dataset.id;
         return id;
-    }
-
-    getRecipeCardById(id) {
-        return this.recipeCardContainer.querySelector(`[data-id="${id}"]`);
     }
 
     getOpenOptionsMenu() {
         return document.querySelector('.options.show') || null;
-    }
-
-    #getImageSrc(image) {
-        if (image instanceof Blob) {
-            try {
-                return URL.createObjectURL(image);
-            } catch (error) {
-                console.warn(
-                    'Failed to create image URL from photo Blob',
-                    error
-                );
-            }
-        }
-        return null;
     }
 
     /* ---- CONDITIONS FOR EVENT DELEGATION ---- */
@@ -506,11 +133,7 @@ export default class View {
 
     shouldCloseOptionsMenu = (event) => {
         return (
-            this.getOpenOptionsMenu() &&
-            event.target?.closest('.options-dropdown') !==
-                document
-                    .querySelector('.options.show')
-                    ?.closest('.options-dropdown')
+            this.getOpenOptionsMenu() && !event.target.matches('.see-options')
         );
     };
 
@@ -569,40 +192,40 @@ export default class View {
         });
     }
     bindPreviewImage(handler) {
-        this.form &&
+        this.form.element &&
             this.bindListener({
                 event: 'change',
                 handler,
-                root: this.form.querySelector('#img-input'),
+                root: this.form.element.querySelector('#img-input'),
             });
     }
 
     bindResetImage(handler) {
-        this.form &&
+        this.form.element &&
             this.bindListener({
                 event: 'click',
                 handler,
                 condition: this.shouldResetImage,
-                root: this.form,
+                root: this.form.element,
             });
     }
 
     bindAddInput(handler) {
-        this.form &&
+        this.form.element &&
             this.bindListener({
                 event: 'keypress',
                 handler,
-                root: this.form,
+                root: this.form.element,
                 condition: this.shouldAddInput,
             });
     }
 
     bindRemoveInput(handler) {
-        this.form &&
+        this.form.element &&
             this.bindListener({
                 event: 'click',
                 handler,
-                root: this.form,
+                root: this.form.element,
                 condition: this.shouldRemoveInput,
             });
     }
@@ -616,8 +239,12 @@ export default class View {
     }
 
     bindSubmit(handler) {
-        this.form &&
-            this.bindListener({ event: 'submit', handler, root: this.form });
+        this.form.element &&
+            this.bindListener({
+                event: 'submit',
+                handler,
+                root: this.form.element,
+            });
     }
 
     bindCloseModal(handler) {
@@ -625,7 +252,7 @@ export default class View {
             this.bindListener({
                 event: 'click',
                 handler,
-                root: this.modal,
+                root: this.modal.element,
                 condition: this.shouldCloseModal,
             });
     }
