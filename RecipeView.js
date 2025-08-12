@@ -1,4 +1,9 @@
-import { createElement, getImageSrc } from './utils.js';
+import {
+    createElement,
+    sanitizeObject,
+    escapeAttribute,
+    getImageSrc,
+} from './utils.js';
 import config from './config.js';
 
 export default class RecipeView {
@@ -9,29 +14,35 @@ export default class RecipeView {
         this.optionsMenu = this.card.querySelector('.options');
     }
 
-    createFullRecipe(recipe) {
+    createFullRecipe(recipeData) {
+        const sanitizedData = recipeData ? sanitizeObject(recipeData) : null;
         const div = createElement('div', {
             class: 'recipe',
-            'data-id': recipe.id,
+            'data-id': sanitizedData.id,
         });
 
-        const imgSrc = getImageSrc(recipe.photo) || config.DEFAULT_IMG_SRC;
+        const imgSrc =
+            getImageSrc(sanitizedData.photo) || config.DEFAULT_IMG_SRC;
 
         div.innerHTML = `
-        <h2>${recipe.name}</h2>
+        <h2>${sanitizedData.name}</h2>
         <img src="${imgSrc}" class="${
-            recipe.photo ? '' : 'placeholder'
-        }" alt="${recipe.name}" />
-        ${recipe.description ? `<p>${recipe.description}</p>` : ''}
+            sanitizedData.photo ? '' : 'placeholder'
+        }" alt="${escapeAttribute(sanitizedData.name)}" />
+        ${
+            sanitizedData.description
+                ? `<p>${sanitizedData.description}</p>`
+                : ''
+        }
         <section>
             <h3>Ingredients</h3>
-            <ul class="recipe-ingredients">${recipe.ingredients
+            <ul class="recipe-ingredients">${sanitizedData.ingredients
                 .map((ingredient) => `<li>${ingredient}</li>`)
                 .join('')}</ul>
         </section>
         <section>
         <h3>Instructions</h3>
-            <ol class="recipe-instructions">${recipe.instructions
+            <ol class="recipe-instructions">${sanitizedData.instructions
                 .map((step) => `<li>${step}</li>`)
                 .join('')}</ol>
         </section>
@@ -56,7 +67,7 @@ export default class RecipeView {
             <div class="img-container" >
                 <img src="${imgSrc}" class="${
             recipe.photo ? '' : 'placeholder'
-        }" alt="${recipe.name}" />
+        }" alt="${escapeAttribute(recipe.name)}" />
             </div>
             <div class="recipe-card-body">
                 <div class="recipe-card-header">
