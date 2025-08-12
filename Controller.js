@@ -1,3 +1,5 @@
+import { createSanitizedProxy, recipeValidator } from './utils.js';
+
 export default class Controller {
     constructor(model, view) {
         this.model = model;
@@ -86,8 +88,7 @@ export default class Controller {
 
     handleSubmit = (event) => {
         event.preventDefault();
-        const formValues = this.view.form.values;
-        const recipe = this.createRecipeFromForm(formValues);
+        const recipe = this.createRecipeFromForm();
         const mode = this.view.form.mode;
 
         if (mode === 'add') {
@@ -160,7 +161,7 @@ export default class Controller {
             photo = null;
         }
 
-        return {
+        const recipe = {
             id: recipeId,
             name: formData.get('name'),
             description: formData.get('description') || null,
@@ -168,6 +169,14 @@ export default class Controller {
             instructions: this.view.form.getFieldsetValues('instructions'),
             photo,
         };
+
+        const proxy = createSanitizedProxy(recipe, recipeValidator);
+
+        for (const [key, value] of Object.entries(recipe)) {
+            proxy[key] = value;
+        }
+
+        return proxy;
     }
 
     getRecipeFromEvent(event) {
