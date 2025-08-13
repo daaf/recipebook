@@ -1,3 +1,4 @@
+import { convertToPlainObject } from './utils.js';
 import data from './preload.js';
 
 const DB_NAME = 'RecipeBookDB';
@@ -92,7 +93,8 @@ export default class Database {
         const store = await this.getObjectStore('readwrite');
 
         return new Promise((resolve, reject) => {
-            const request = store.put(recipe);
+            const recipeObject = convertToPlainObject(recipe);
+            const request = store.put(recipeObject);
 
             request.onsuccess = () => {
                 `Successfully saved recipe with id ${recipe.id} to database`;
