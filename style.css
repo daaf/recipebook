@@ -325,6 +325,11 @@ li {
     background-color: var(--medium-grey);
 }
 
+.input-error {
+    border: 2px solid var(--danger);
+    box-shadow: 0 0 4px var(--danger);
+}
+
 .two-column {
     display: grid;
     grid-gap: var(--gap-large);

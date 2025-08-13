@@ -191,6 +191,13 @@ export default class View {
             condition: this.shouldOpenEditForm,
         });
     }
+    bindValidateForm(handler) {
+        this.bindListener({
+            event: 'change',
+            handler,
+            root: this.form.element,
+        });
+    }
     bindPreviewImage(handler) {
         this.form.element &&
             this.bindListener({

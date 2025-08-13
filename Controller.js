@@ -1,4 +1,4 @@
-import { createSanitizedProxy, recipeValidator } from './utils.js';
+import { createSanitizedProxy, recipeValidator, InputError } from './utils.js';
 
 export default class Controller {
     constructor(model, view) {
@@ -54,6 +54,18 @@ export default class Controller {
         this.bindFormHandlers();
     };
 
+    handleValidateForm = () => {
+        const formData = this.view.form.values;
+        const sanitizedData = this.sanitizeFormData(formData);
+
+        if (sanitizedData instanceof InputError) {
+            const error = sanitizedData;
+            this.view.form.highlightInvalidInput(error.prop);
+        } else if (this.view.form.invalidInput) {
+            this.view.form.resetInputValidity(this.view.form.invalidInput);
+        }
+    };
+
     handleAddInput = (event) => {
         this.view.form.addTextInputsToFieldset(
             event.target.closest('fieldset')
@@ -78,7 +90,7 @@ export default class Controller {
     };
 
     handleResetImage = () => {
-        const formValues = { ...this.createRecipeFromForm(), photo: null };
+        const formValues = { ...this.sanitizeFormData(), photo: null };
         this.view.form.reset();
         this.view.form.toggleImageRemoveButton();
         this.view.form.toggleImageAddButton();
@@ -88,16 +100,20 @@ export default class Controller {
 
     handleSubmit = (event) => {
         event.preventDefault();
-        const recipe = this.createRecipeFromForm();
+        const formData = this.view.form.values;
+        const sanitizedData = this.sanitizeFormData(formData);
+
+        if (sanitizedData instanceof Error) return;
+
         const mode = this.view.form.mode;
 
         if (mode === 'add') {
-            const recipeView = this.view.createRecipeView(recipe);
-            this.model.addRecipe(recipe);
+            const recipeView = this.view.createRecipeView(sanitizedData);
+            this.model.addRecipe(sanitizedData);
             this.view.addRecipeView(recipeView);
         } else if (mode === 'edit') {
-            this.model.updateRecipe(recipe);
-            this.view.updateRecipeView(recipe);
+            this.model.updateRecipe(sanitizedData);
+            this.view.updateRecipeView(sanitizedData);
         }
         this.handleCloseModal();
     };
@@ -134,6 +150,7 @@ export default class Controller {
     };
 
     bindFormHandlers = () => {
+        this.view.bindValidateForm(this.handleValidateForm);
         this.view.bindPreviewImage(this.handlePreviewImage);
         this.view.bindResetImage(this.handleResetImage);
         this.view.bindAddInput(this.handleAddInput);
@@ -146,10 +163,24 @@ export default class Controller {
         this.view.bindCloseModal(this.handleCloseModal);
     };
 
-    createRecipeFromForm() {
+    sanitizeFormData(formData) {
+        const data = this.assembleRecipeData(formData);
+
+        try {
+            const proxy = createSanitizedProxy(data, recipeValidator);
+
+            Object.entries(data).forEach(
+                ([prop, value]) => (proxy[prop] = value)
+            );
+            return proxy;
+        } catch (error) {
+            return error;
+        }
+    }
+
+    assembleRecipeData(formData) {
         const recipeId = this.view.form.id || crypto.randomUUID();
         const existingRecipe = this.model.cache.get(recipeId) || null;
-        const formData = this.view.form.values;
         const uploadedImage = formData.get('img-input') ?? null;
         let photo;
 
@@ -161,7 +192,7 @@ export default class Controller {
             photo = null;
         }
 
-        const recipe = {
+        const data = {
             id: recipeId,
             name: formData.get('name'),
             description: formData.get('description') || null,
@@ -170,13 +201,7 @@ export default class Controller {
             photo,
         };
 
-        const proxy = createSanitizedProxy(recipe, recipeValidator);
-
-        for (const [key, value] of Object.entries(recipe)) {
-            proxy[key] = value;
-        }
-
-        return proxy;
+        return data;
     }
 
     getRecipeFromEvent(event) {

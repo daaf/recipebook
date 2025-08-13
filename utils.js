@@ -1,3 +1,12 @@
+class InputError extends Error {
+    constructor(prop, value) {
+        super();
+        this.name = 'InputError';
+        this.prop = prop;
+        this.message = `Invalid value for ${prop}: ${value}`;
+    }
+}
+
 function createElement(tag, attributes) {
     const element = document.createElement(tag);
 
@@ -30,7 +39,7 @@ function createSanitizedProxy(target, validator = () => true) {
             }
 
             if (!validator(prop, sanitizedValue)) {
-                throw new Error(`Invalid value for ${prop}: ${sanitizedValue}`);
+                throw new InputError(prop, value);
             }
 
             obj[prop] = sanitizedValue;
@@ -46,7 +55,7 @@ function recipeValidator(prop, value) {
     const isString = typeof value === 'string';
     const isArrayOfStrings =
         value instanceof Array &&
-        value?.every((item) => typeof item === string);
+        value?.every((item) => typeof item === 'string');
 
     if (
         typeof value === 'object' &&
@@ -123,6 +132,7 @@ function getImageSrc(image) {
 
 export {
     createElement,
+    InputError,
     createSanitizedProxy,
     recipeValidator,
     sanitizeText,
