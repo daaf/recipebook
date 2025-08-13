@@ -1,3 +1,12 @@
+class InputError extends Error {
+    constructor(prop, value) {
+        super();
+        this.name = 'InputError';
+        this.prop = prop;
+        this.message = `Invalid value for ${prop}: ${value}`;
+    }
+}
+
 function createElement(tag, attributes) {
     const element = document.createElement(tag);
 
@@ -30,7 +39,7 @@ function createSanitizedProxy(target, validator = () => true) {
             }
 
             if (!validator(prop, sanitizedValue)) {
-                throw new Error(`Invalid value for ${prop}: ${sanitizedValue}`);
+                throw new InputError(prop, value);
             }
 
             obj[prop] = sanitizedValue;
@@ -43,10 +52,10 @@ function createSanitizedProxy(target, validator = () => true) {
 }
 
 function recipeValidator(prop, value) {
-    const isNotString = typeof value !== 'string';
-    const isNotArrayOfStrings =
-        !value instanceof Array ||
-        !value.every((item) => typeof item === string);
+    const isString = typeof value === 'string';
+    const isArrayOfStrings =
+        value instanceof Array &&
+        value?.every((item) => typeof item === 'string');
 
     if (
         typeof value === 'object' &&
@@ -55,11 +64,11 @@ function recipeValidator(prop, value) {
     )
         return false;
 
-    if (prop === 'id' && (!value || isNotString)) return false;
-    if (prop === 'name' && (!value || isNotString)) return false;
-    if (prop === 'description' && value && isNotString) return false;
-    if (prop === 'ingredients' && value && isNotArrayOfStrings) return false;
-    if (prop === 'instructions' && value && isNotArrayOfStrings) return false;
+    if (prop === 'id' && (!value || !isString)) return false;
+    if (prop === 'name' && (!value || !isString)) return false;
+    if (prop === 'description' && value && !isString) return false;
+    if (prop === 'ingredients' && value && !isArrayOfStrings) return false;
+    if (prop === 'instructions' && value && !isArrayOfStrings) return false;
     if (
         prop === 'photo' &&
         value &&
@@ -73,9 +82,9 @@ function recipeValidator(prop, value) {
 
 function sanitizeText(input) {
     if (typeof input === 'string') {
-        return DOMPurify.sanitize(input)
+        return window.DOMPurify.sanitize(input)
             .replace(/<.*?>/g, '') // Remove anything between < and >
-            .replace(/[=]/g, ''); // Remove some non-alphanumeric characters
+            .replace(/[=]/g, ''); // Remove =
     } else {
         return input;
     }
@@ -123,6 +132,7 @@ function getImageSrc(image) {
 
 export {
     createElement,
+    InputError,
     createSanitizedProxy,
     recipeValidator,
     sanitizeText,

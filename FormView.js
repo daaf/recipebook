@@ -11,6 +11,7 @@ export default class FormView {
     constructor(recipe) {
         this.recipe = recipe;
         this.element = this.create(this.recipe);
+        this.invalidInput = null;
     }
 
     get state() {
@@ -181,6 +182,21 @@ export default class FormView {
 
     getInputsInFieldset(fieldsetId) {
         this.element.querySelectorAll(`#${fieldsetId} input`);
+    }
+
+    highlightInvalidInput(inputName) {
+        const selector = `input[name="${inputName}"]`;
+        const input = this.element.querySelector(selector);
+        input.setCustomValidity(`Please enter a valid ${inputName} value`);
+        input.classList.add('input-error');
+        this.invalidInput = selector;
+    }
+
+    resetInputValidity(selector) {
+        const input = this.element.querySelector(selector);
+        input.setCustomValidity('');
+        input.classList.remove('input-error');
+        this.invalidInput = null;
     }
 
     getImagePreview() {
