@@ -1,8 +1,9 @@
 import {
     createElement,
-    sanitizeObject,
-    escapeAttribute,
+    createSanitizedProxy,
+    encodeAttribute,
     getImageSrc,
+    recipeValidator,
 } from './utils.js';
 import config from './config.js';
 
@@ -15,7 +16,9 @@ export default class RecipeView {
     }
 
     createFullRecipe(recipeData) {
-        const sanitizedData = recipeData ? sanitizeObject(recipeData) : null;
+        const sanitizedData = recipeData
+            ? createSanitizedProxy(recipeData, recipeValidator)
+            : null;
         const div = createElement('div', {
             class: 'recipe',
             'data-id': sanitizedData.id,
@@ -28,7 +31,7 @@ export default class RecipeView {
         <h2>${sanitizedData.name}</h2>
         <img src="${imgSrc}" class="${
             sanitizedData.photo ? '' : 'placeholder'
-        }" alt="${escapeAttribute(sanitizedData.name)}" />
+        }" alt="${encodeAttribute(sanitizedData.name)}" />
         ${
             sanitizedData.description
                 ? `<p>${sanitizedData.description}</p>`
@@ -55,23 +58,27 @@ export default class RecipeView {
         return div;
     }
 
-    createRecipeCard(recipe) {
+    createRecipeCard(recipeData) {
+        const sanitizedData = recipeData
+            ? createSanitizedProxy(recipeData, recipeValidator)
+            : null;
         const div = createElement('div', {
             class: 'recipe-card',
-            'data-id': recipe.id,
+            'data-id': sanitizedData.id,
         });
 
-        const imgSrc = getImageSrc(recipe.photo) || config.DEFAULT_IMG_SRC;
+        const imgSrc =
+            getImageSrc(sanitizedData.photo) || config.DEFAULT_IMG_SRC;
 
         div.innerHTML = `
             <div class="img-container" >
                 <img src="${imgSrc}" class="${
-            recipe.photo ? '' : 'placeholder'
-        }" alt="${escapeAttribute(recipe.name)}" />
+            sanitizedData.photo ? '' : 'placeholder'
+        }" alt="${encodeAttribute(sanitizedData.name)}" />
             </div>
             <div class="recipe-card-body">
                 <div class="recipe-card-header">
-                    <h2 class="recipe-name">${recipe.name}</h2>
+                    <h2 class="recipe-name">${sanitizedData.name}</h2>
                     <div class="options-dropdown">
                         <input type="image" src="./assets/icons/3-dots_black.png" class="see-options" aria-label="See more options" name="options" />
                         <div class="options">
@@ -80,7 +87,7 @@ export default class RecipeView {
                         </div>
                     </div>
                 </div>
-                <ul class="recipe-ingredients">${recipe.ingredients
+                <ul class="recipe-ingredients">${sanitizedData.ingredients
                     .map((ingredient) => `<li>${ingredient}</li>`)
                     .join('')}
                 </ul>

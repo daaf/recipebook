@@ -16,22 +16,52 @@ function createElement(tag, attributes) {
     return element;
 }
 
-function mapObject(object, func) {
-    const outputObject = {};
-    for (const property in object) {
-        if (object[property] instanceof Array) {
-            outputObject[property] = object[property].map((item) => func(item));
-        } else if (typeof object[property] === 'string') {
-            outputObject[property] = func(object[property]);
-        } else {
-            outputObject[property] = object[property];
-        }
-    }
-    return outputObject;
+function createSanitizedProxy(target, validator = () => true) {
+    return new Proxy(target, {
+        set(obj, prop, value) {
+            let sanitizedValue;
+
+            if (typeof value === 'string') {
+                sanitizedValue = sanitizeText(value);
+            } else if (value instanceof Array) {
+                sanitizedValue = sanitizeArray(value);
+            } else {
+                sanitizedValue = value;
+            }
+
+            if (!validator(prop, sanitizedValue)) {
+                throw new Error(`Invalid value for ${prop}: ${sanitizedValue}`);
+            }
+
+            obj[prop] = sanitizedValue;
+            return true;
+        },
+        get(obj, prop) {
+            return obj[prop];
+        },
+    });
 }
 
-function sanitizeObject(object) {
-    return mapObject(object, sanitizeText);
+function recipeValidator(prop, value) {
+    const isNotString = typeof value !== 'string';
+    const isNotArrayOfStrings =
+        !value instanceof Array ||
+        !value.every((item) => typeof item === string);
+
+    if (prop === 'id' && (!value || isNotString)) return false;
+    if (prop === 'name' && (!value || isNotString)) return false;
+    if (prop === 'description' && value && isNotString) return false;
+    if (prop === 'ingredients' && value && isNotArrayOfStrings) return false;
+    if (prop === 'instructions' && value && isNotArrayOfStrings) return false;
+    if (
+        prop === 'photo' &&
+        value &&
+        (!value instanceof File || !value instanceof Blob)
+    ) {
+        return false;
+    }
+
+    return true;
 }
 
 function sanitizeText(input) {
@@ -44,13 +74,33 @@ function sanitizeText(input) {
     }
 }
 
-function escapeAttribute(value) {
+function sanitizeArray(input) {
+    if (input instanceof Array) {
+        return input.map((item) => sanitizeText(item));
+    } else {
+        return input;
+    }
+}
+
+function encodeAttribute(value) {
     if (typeof value !== 'string') return value;
     return value
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+function convertToPlainObject(input) {
+    if (input === null || typeof input !== 'object') return input;
+    if (input instanceof File || input instanceof Blob) return input;
+    if (input instanceof Array) return input.map(convertToPlainObject);
+
+    const object = {};
+    for (const key of Object.keys(input)) {
+        object[key] = convertToPlainObject(input[key]);
+    }
+    return object;
 }
 
 function getImageSrc(image) {
@@ -66,8 +116,10 @@ function getImageSrc(image) {
 
 export {
     createElement,
-    sanitizeObject,
+    createSanitizedProxy,
+    recipeValidator,
     sanitizeText,
-    escapeAttribute,
+    encodeAttribute,
+    convertToPlainObject,
     getImageSrc,
 };

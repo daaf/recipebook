@@ -1,8 +1,9 @@
 import {
     createElement,
+    createSanitizedProxy,
+    recipeValidator,
     sanitizeText,
-    sanitizeObject,
-    escapeAttribute,
+    encodeAttribute,
     getImageSrc,
 } from './utils.js';
 
@@ -29,7 +30,9 @@ export default class FormView {
     }
 
     create(recipeData) {
-        const sanitizedData = recipeData ? sanitizeObject(recipeData) : null;
+        const sanitizedData = recipeData
+            ? createSanitizedProxy(recipeData, recipeValidator)
+            : null;
         const attributes = {
             id: 'add-update-recipe',
             'aria-label': 'Create or update recipe',
@@ -48,7 +51,7 @@ export default class FormView {
                 name="name"
                 aria-label="Recipe name"
                 placeholder="My awesome recipe"
-                value="${escapeAttribute(sanitizedData?.name || '')}"
+                value="${encodeAttribute(sanitizedData?.name || '')}"
                 required
                 />
                 <div class="two-column main-left">
@@ -67,7 +70,7 @@ export default class FormView {
                             id="img-preview"
                             ${
                                 imgSrc
-                                    ? `alt="Preview of selected image: ${escapeAttribute(
+                                    ? `alt="Preview of selected image: ${encodeAttribute(
                                           sanitizedData.name
                                       )}" data-populated`
                                     : ''
