@@ -1,4 +1,4 @@
-import { sanitizeObject } from './utils.js';
+import { createSanitizedProxy, recipeValidator } from './utils.js';
 
 export default class Controller {
     constructor(model, view) {
@@ -171,7 +171,7 @@ export default class Controller {
             photo,
         };
 
-        return sanitizeObject(recipe);
+        return createSanitizedProxy(recipe, recipeValidator);
     }
 
     getRecipeFromEvent(event) {
